@@ -44,6 +44,8 @@ def main():
         'krab': data,
         'README.md': (root / 'cli/README.md').read_bytes(),
         'LICENSE': (root / 'LICENSE').read_bytes(),
+        'nvidia-cpu-cc.py': (root / 'scripts/nvidia-cpu-cc.py').read_bytes(),
+        'CPU-CC.md': (root / 'docs/nvidia-cpu-confidential.md').read_bytes(),
         'SHA256SUMS': f'{digest}  krab\n'.encode(),
         'BUILD-INFO.json': (json.dumps({
             'version': version, 'revision': args.revision, 'platform': args.platform,

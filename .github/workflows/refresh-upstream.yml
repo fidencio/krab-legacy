@@ -54,6 +54,11 @@ jobs:
       - name: Check the published chart
         if: steps.candidate.outputs.changed == 'true'
         run: npm run verify:chart-artifact -- --group ${{ matrix.group }}
+      - name: Build shared browser engine
+        if: steps.candidate.outputs.changed == 'true'
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --target wasm32-unknown-unknown
+          npm run build:core
       - if: steps.candidate.outputs.changed == 'true'
         run: npm test
       - if: steps.candidate.outputs.changed == 'true'
@@ -109,6 +114,11 @@ jobs:
         run: npm run verify:erofs-image
       - if: steps.candidate.outputs.changed == 'true'
         run: npm run generate
+      - name: Build shared browser engine
+        if: steps.candidate.outputs.changed == 'true'
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --target wasm32-unknown-unknown
+          npm run build:core
       - if: steps.candidate.outputs.changed == 'true'
         run: npm test
       - if: steps.candidate.outputs.changed == 'true'

@@ -16,7 +16,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react'
-import catalogData from './generated/catalog.json'
+import { coreCatalog } from './lib/core'
 import packageData from '../package.json'
 import krabLogoDark from './assets/brands/krab-kata-hybrid.png'
 import krabLogoLight from './assets/brands/krab-kata-hybrid-light.png'
@@ -34,12 +34,14 @@ import {
   customRuntimeClassName,
   customRuntimeSnapshotter,
   importValuesBundle,
+  importCpuCcOverlay,
   normalizeDeploymentName,
   resolveRuntimeShimIds,
   resolveComponents,
   usesConfidentialComputing,
   uncoveredRuntimeArchitectures,
   validateCustomRuntimes,
+  validateCliConfiguration,
   type AdvancedConfiguration,
   type ChartImageConfiguration,
   type ClusterConfiguration,
@@ -51,7 +53,7 @@ import {
 } from './lib/artifacts'
 import './App.css'
 
-const catalog = catalogData as unknown as ExplorerCatalog
+const catalog = coreCatalog as ExplorerCatalog
 const siteBase = import.meta.env.BASE_URL.split('/').filter(Boolean)[0]
 const siteRootUrl = `/${siteBase ? `${siteBase}/` : ''}`
 const releasesUrl = `${siteRootUrl}releases/`
@@ -402,17 +404,16 @@ function App() {
     colorScheme.addEventListener('change', followSystemTheme)
     return () => colorScheme.removeEventListener('change', followSystemTheme)
   }, [])
-  const artifacts = useMemo(() => ({
-    values: buildValuesBundle(
-      catalog,
-      selectedVendor,
-      selections,
-      cluster,
-      runtime,
-      { ...advanced, installErofsUtils },
-    ),
-    install: buildInstallScript(catalog, deploymentName),
-  }), [advanced, cluster, deploymentName, installErofsUtils, runtime, selectedVendor, selections])
+  const artifacts = useMemo(() => {
+    const config = buildCliConfiguration(selectedVendor, selections, cluster, runtime, advanced)
+    const validationError = validateCliConfiguration(config, catalog)
+    let values = ''
+    try {
+      values = buildValuesBundle(catalog, selectedVendor, selections, cluster, runtime, advanced)
+    } catch { /* Incomplete drafts remain editable; validation explains the issue. */ }
+    return { values, validationError, install: buildInstallScript(catalog, deploymentName) }
+  }, [advanced, cluster, deploymentName, runtime, selectedVendor, selections])
+
   const valuesFileName = buildValuesFileName(catalog, deploymentName)
   const effectiveDeploymentName = normalizeDeploymentName(
     deploymentName,
@@ -535,6 +536,7 @@ function App() {
     selectedVendor, selections, advanced.components, runtime, advanced.customRuntimes,
   )
   const valuesReady =
+    !artifacts.validationError &&
     cluster.distributionId !== null &&
     (!(components.kataDeploy || components.provisioner) ||
       (incompleteFamilies.length === 0 && !unsupportedSelection)) &&
@@ -545,7 +547,7 @@ function App() {
       customRuntimeErrors.length === 0 &&
       (runtimeOnlyVendor || selectedVendor.id === 'custom'
         ? hasRuntimeSelection
-        : hasHardwareSelection || hasStandaloneRuntimeSelection)))
+        : hasHardwareSelection || hasStandaloneRuntimeSelection || advanced.customRuntimes.length > 0)))
 
   const selectVendor = (vendor: VendorCatalog) => {
     setImportMessage(null)
@@ -587,6 +589,23 @@ function App() {
         type: 'error',
         text: error instanceof Error ? error.message : 'Unable to load values.yaml.',
       })
+    }
+  }
+
+  const loadCpuCcOverlay = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      if (file.size > 1_000_000) throw new Error('CPU CC overlay exceeds the 1 MB limit.')
+      const profiles = importCpuCcOverlay(await file.text(), catalog)
+      setAdvanced(current => ({ ...current, customRuntimes: [
+        ...current.customRuntimes.filter(old => !profiles.some(profile => profile.name === old.name)), ...profiles,
+      ] }))
+      if (selectedVendor.id === 'custom' && customArchitectures.length === 0) {
+        setCluster(current => ({ ...current, architectures: ['amd64'] }))
+      }
+      setImportMessage({ type: 'success', text: `${file.name}: imported ${profiles.length} NVIDIA CPU confidential ${profiles.length === 1 ? 'runtime' : 'runtimes'}. Review the custom runtimes before deploying.` })
+    } catch (error) {
+      setImportMessage({ type: 'error', text: error instanceof Error ? error.message : 'Could not import CPU CC overlay.' })
     }
   }
 
@@ -808,7 +827,7 @@ function App() {
     if (!valuesReady) return
     const blob = new Blob([native
       ? JSON.stringify(buildCliConfiguration(selectedVendor, selections, cluster, runtime, advanced, effectiveDeploymentName), null, 2) + '\n'
-      : `${artifacts.values}\n`], {
+      : artifacts.values], {
       type: 'application/yaml',
     })
     const url = URL.createObjectURL(blob)
@@ -953,7 +972,7 @@ function App() {
                 ))}
               </section>
 
-              <CliGuide version={packageData.version} development={isDevelopmentBuild} />
+              <CliGuide />
 
               <IommufdSetupNote reports={[]} />
 
@@ -2344,6 +2363,16 @@ function App() {
                       </div>
                     </section>
                   )}
+                  {['custom', 'nvidia'].includes(selectedVendor.id) && <div className="cpu-cc-import">
+                    <label className="import-values-button">
+                      <Upload size={14} /> Import NVIDIA CPU TDX / SNP
+                      <input type="file" accept=".json,application/json" onChange={event => {
+                        void loadCpuCcOverlay(event.target.files?.[0])
+                        event.target.value = ''
+                      }} />
+                    </label>
+                    <a href="#docs/cpu-cc">Prepare a CPU confidential profile <ExternalLink size={12} /></a>
+                  </div>}
                   {selectedVendor.hardwareFamilies.map((family) => (
                     <details
                       className={`profile-card ${
@@ -2810,9 +2839,7 @@ function App() {
                         ))}
                       </ul>
                       <p>
-                        KRAB will generate values.yaml once the cluster platform,
-                        workload path, and every confidential GPU profile are fully
-                        configured.
+                        {artifacts.validationError ?? 'Complete the cluster platform, workload path, and confidential GPU profile selections to generate values.yaml.'}
                       </p>
                     </div>
                   )}

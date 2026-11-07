@@ -1,0 +1,21 @@
+[package]
+name = "krab-core"
+version = "0.2.8"
+edition = "2021"
+license = "Apache-2.0"
+description = "Shared KRAB configuration engine for native and browser clients"
+publish = false
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+serde_yaml_ng = "0.10"
+jsonschema = { version = "0.46", default-features = false }
+
+[profile.release]
+lto = true
+opt-level = "s"
+strip = true

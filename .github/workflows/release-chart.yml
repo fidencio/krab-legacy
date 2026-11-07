@@ -67,6 +67,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Install shared browser engine toolchain
+        run: rustup toolchain install 1.95.0 --profile minimal --target wasm32-unknown-unknown
+
       - name: Verify release versions and branch
         shell: bash
         run: |
@@ -84,8 +87,8 @@ jobs:
           const chart = parse(readFileSync('charts/krab/Chart.yaml', 'utf8'))
           const precheck = parse(readFileSync('charts/precheck/Chart.yaml', 'utf8'))
           const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
-          for (const path of ['preflight/Cargo.toml', 'preflight/Cargo.lock', 'cli/Cargo.toml', 'cli/Cargo.lock']) {
-            const version = readFileSync(path, 'utf8').match(/name = \"krab(?:-preflight)?\"\nversion = \"([^\"]+)\"/)?.[1]
+          for (const path of ['preflight/Cargo.toml', 'preflight/Cargo.lock', 'cli/Cargo.toml', 'cli/Cargo.lock', 'core/Cargo.toml', 'core/Cargo.lock']) {
+            const version = readFileSync(path, 'utf8').match(/name = \"krab(?:-preflight|-core)?\"\nversion = \"([^\"]+)\"/)?.[1]
             if (version !== pkg.version) {
               throw new Error(`${path}: native version ${version} must match KRAB ${pkg.version}; run npm run generate`)
             }
@@ -148,8 +151,9 @@ jobs:
       - name: Regenerate and verify committed release data
         run: |
           npm run generate
+          npm run build:core
           git diff --exit-code -- \
-            preflight/Cargo.toml preflight/Cargo.lock cli/Cargo.toml cli/Cargo.lock \
+            preflight/Cargo.toml preflight/Cargo.lock cli/Cargo.toml cli/Cargo.lock core/Cargo.toml core/Cargo.lock \
             package-lock.json charts/krab/Chart.yaml charts/krab/values.yaml \
             charts/precheck/Chart.yaml charts/precheck/values.yaml \
             Dockerfile.precheck upstream/precheck-image.lock.json \

@@ -1,7 +1,5 @@
+import { coreRequest, coreDefaults } from './core'
 import { parse, stringify } from 'yaml'
-import Ajv from 'ajv'
-import valuesSchema from '../../charts/krab/values.schema.json' with { type: 'json' }
-import { erofsUtilsImage } from './erofs-image'
 
 export type ModeCatalog = {
   id: string
@@ -341,49 +339,19 @@ export type ImportedValuesConfiguration = {
 }
 
 const valuesFormatVersion = 2
-const validateValues = new Ajv({ allErrors: true }).compile(valuesSchema)
+const validateValues = Object.assign((value: unknown): boolean => {
+  try {
+    coreRequest('schema', undefined, undefined, value)
+    validateValues.errors = null
+    return true
+  } catch (error) {
+    validateValues.errors = [{ instancePath: '', message: error instanceof Error ? error.message : 'Invalid chart values' }]
+    return false
+  }
+}, { errors: null as Array<{ instancePath: string; message: string }> | null })
 
-const createChartImageConfiguration = (): ChartImageConfiguration => ({
-  pullPolicy: '',
-  pullSecrets: [],
-  reference: '',
-  tag: '',
-  dispatcherReference: '',
-  dispatcherTag: '',
-})
-
-export const createAdvancedConfiguration = (): AdvancedConfiguration => ({
-  qgs: { mode: '', pcsApiKeySecretName: '', deploySgxPlugin: null },
-  components: { nfd: null, kataDeploy: null, devicePlugin: null, provisioner: null, qgs: null },
-  containerdConfigDir: '',
-  containerdRuntimeSocket: '',
-  containerdConfigFileName: '',
-  containerdUserDropIn: '',
-  shimDropIns: {},
-  customRuntimes: [],
-  erofsSnapshotterMode: 'memory',
-  erofsDiskSize: '256M',
-  erofsDmverity: true,
-  erofsEnableFsverity: false,
-  installErofsUtils: false,
-  erofsUtilsImage: '',
-  nodeSelector: [],
-  nodeAffinity: [],
-  tolerations: [],
-  scheduledReconcileEnabled: false,
-  scheduledReconcileSchedule: '*/15 * * * *',
-  images: {
-    kataDeploy: {
-      ...createChartImageConfiguration(),
-      kubectlReference: '',
-      kubectlTag: '',
-    },
-    nfd: createChartImageConfiguration(),
-    devicePlugin: createChartImageConfiguration(),
-    provisioner: createChartImageConfiguration(),
-  },
-  debug: false,
-})
+export const createAdvancedConfiguration = (): AdvancedConfiguration =>
+  structuredClone(coreDefaults) as AdvancedConfiguration
 
 const asRecord = (value: unknown): Record<string, any> =>
   value && typeof value === 'object' && !Array.isArray(value)
@@ -976,498 +944,23 @@ export function buildValuesBundle(
   runtime: RuntimeConfiguration,
   advanced: AdvancedConfiguration,
 ) {
-  const architecture = catalog.plannedArchitecture
-  const profiles: Record<string, unknown> = {}
-  const runtimeValues = structuredClone(vendor.runtime.chart.values) as {
-    shims?: Record<
-      string,
-      {
-        enabled?: boolean
-        dropIn?: string
-        agent?: { httpsProxy?: string; noProxy?: string }
-        nvrc?: { enableDCGM?: boolean }
-      } | boolean
-    >
-    defaultShim?: Record<string, string>
-    customRuntimes?: {
-      enabled: boolean
-      runtimes: Record<string, unknown>
-    }
-    'node-feature-discovery'?: { enabled?: boolean }
-    snapshotter?: {
-      setup?: string[]
-      erofsMergeMode?: string
-      erofsSnapshotterMode?: string
-      erofsDmverity?: boolean
-    }
-    containerd?: Record<string, unknown>
-    deploymentMode?: string
-    debug?: boolean
-    nodeSelector?: Record<string, string>
-    affinity?: Record<string, unknown>
-    tolerations?: Array<Record<string, unknown>>
-    imagePullPolicy?: string
-    imagePullSecrets?: Array<{ name: string }>
-    image?: { reference?: string; tag?: string }
-    kubectlImage?: { reference?: string; tag?: string }
-    job?: {
-      dispatcherImage?: { reference?: string; tag?: string }
-      reconcile?: { enabled: boolean; schedule: string }
-    }
-    nodeBinaries?: Record<
-      string,
-      { image: string; binaries: string[]; pullPolicy?: string }
-    >
-    k8sDistribution?: string
-    selinux?: { enabled?: boolean }
-  }
-  runtimeValues.deploymentMode = 'job'
-  runtimeValues.debug = advanced.debug
-  const distribution = architecture.cluster.distributions.find(
-    ({ id }) => id === cluster.distributionId,
-  )
-  if (distribution) {
-    runtimeValues.k8sDistribution = distribution.kataDeployValue
-  }
-  runtimeValues.selinux = {
-    ...(runtimeValues.selinux ?? {}),
-    enabled: cluster.selinuxEnabled,
-  }
-  const enabledShims = new Set(
-    resolveRuntimeShimIds(vendor, selections, runtime),
-  )
+  const config = buildCliConfiguration(vendor, selections, cluster, runtime, advanced)
+  const source = catalog.vendors.includes(vendor) ? catalog : { ...catalog, vendors: [...catalog.vendors.filter(({ id }) => id !== vendor.id), vendor] }
+  return coreRequest<string>('renderPreview', config, source)
+}
 
-  for (const family of vendor.hardwareFamilies) {
-    if (family.availability !== 'available') continue
-    const selection = selections[family.id]
-    const mode = family.modes.find(
-      (candidate) => candidate.id === selection?.modeId,
-    )
-    if (mode) {
-      if (mode.id === 'off') {
-        profiles[mode.profileName] = {
-          enabled: true,
-          ...structuredClone(mode.values),
-        }
-      } else {
-        for (const cpuTeeId of selection.cpuTeeIds) {
-          if (!mode.supportedCpuTeeIds.includes(cpuTeeId)) continue
-          const tee = vendor.runtime.cpuTees.find(({ id }) => id === cpuTeeId)
-          if (!tee) continue
-          const cpuNodeSelector = Object.fromEntries(
-            Object.entries(tee.nodeSelector).filter(
-              ([key]) => key !== 'nvidia.com/cc.ready.state',
-            ),
-          )
-          profiles[`${mode.profileName}-${tee.id.toUpperCase()}`] = {
-            enabled: true,
-            ...structuredClone(mode.values),
-            nodeSelector: {
-              ...(mode.values.nodeSelector as Record<string, string>),
-              ...cpuNodeSelector,
-            },
-          }
-        }
-      }
+/** Selection validation belongs to the shared Rust engine, with one pinned chart schema. */
+export function validateCliConfiguration(config: unknown, catalog: ExplorerCatalog): string | null {
+  try {
+    const values = coreRequest('validate', config, catalog)
+    if (!validateValues(values)) {
+      const error = validateValues.errors?.[0]
+      return `Generated values do not match the chart schema: ${error?.instancePath || 'root'} ${error?.message ?? 'is invalid'}`
     }
+    return null
+  } catch (error) {
+    return error instanceof Error ? error.message : 'Invalid configuration'
   }
-
-  const sourceShims = runtimeValues.shims ?? {}
-  const selectedShims: NonNullable<typeof runtimeValues.shims> = {
-    disableAll: true,
-  }
-  for (const shimId of enabledShims) {
-    const shimConfig = sourceShims[shimId]
-    if (shimConfig && typeof shimConfig !== 'boolean') {
-      const selectedShim = { ...shimConfig, enabled: true }
-      const dropIn = advanced.shimDropIns[shimId]
-      if (dropIn?.trim()) {
-        selectedShim.dropIn = dropIn
-      }
-      if (selectedShim.agent) {
-        selectedShim.agent = {
-          ...selectedShim.agent,
-          httpsProxy: runtime.runtimeHttpsProxy.trim(),
-          noProxy: runtime.runtimeNoProxy.trim(),
-        }
-      }
-      if (shimId.includes('nvidia-gpu')) {
-        selectedShim.nvrc = {
-          ...(selectedShim.nvrc ?? {}),
-          enableDCGM: runtime.nvidiaDcgmEnabled,
-        }
-      }
-      selectedShims[shimId] = selectedShim
-    }
-  }
-  runtimeValues.shims = selectedShims
-  const sourceDefaultShims = runtimeValues.defaultShim ?? {}
-  const selectedShimCatalog = [...enabledShims]
-    .filter((shimId) => typeof selectedShims[shimId] === 'object')
-    .map((shimId) => vendor.runtime.shims.find(({ id }) => id === shimId))
-    .filter(
-      (shim): shim is VendorCatalog['runtime']['shims'][number] => Boolean(shim),
-    )
-  const supportedArchitectures = new Set(
-    vendor.id === 'custom' && cluster.architectures
-      ? cluster.architectures
-      : selectedShimCatalog.flatMap(({ supportedArches }) => supportedArches),
-  )
-  const defaultShims = Object.fromEntries(
-    [...supportedArchitectures].map((architecture) => {
-      const candidates = selectedShimCatalog.filter(({ supportedArches }) =>
-        supportedArches.includes(architecture),
-      )
-      const configuredDefault = sourceDefaultShims[architecture]
-      const generalCandidates = vendor.id === 'custom'
-        ? candidates.filter(({ id }) => !/(?:^|-)(?:snp|tdx|se)(?:-|$)/.test(id) && !id.includes('nvidia-gpu'))
-        : candidates
-      const selectedDefault =
-        generalCandidates.find(({ id }) => id === configuredDefault) ?? generalCandidates[0]
-      return selectedDefault ? [architecture, selectedDefault.id] : null
-    }).filter((entry): entry is string[] => entry !== null),
-  )
-  if (Object.keys(defaultShims).length > 0) {
-    runtimeValues.defaultShim = defaultShims
-  } else {
-    delete runtimeValues.defaultShim
-  }
-  if (advanced.customRuntimes.length > 0) {
-    // Kata uses the base shim's architecture metadata for custom runtimes even
-    // when the corresponding built-in handler is disabled.
-    for (const { baseConfig } of advanced.customRuntimes) {
-      const base = sourceShims[baseConfig]
-      if (!(baseConfig in selectedShims) && base && typeof base !== 'boolean') {
-        selectedShims[baseConfig] = { ...base, enabled: false }
-      }
-    }
-    runtimeValues.customRuntimes = {
-      enabled: true,
-      runtimes: Object.fromEntries(
-        advanced.customRuntimes.map((customRuntime) => [
-          customRuntime.name.trim(),
-          {
-            baseConfig: customRuntime.baseConfig,
-            ...(customRuntime.dropIn.trim()
-              ? { dropIn: customRuntime.dropIn }
-              : {}),
-            runtimeClass: customRuntime.runtimeClass,
-            ...(customRuntime.inheritBaseOverhead !== undefined
-              ? { inheritBaseOverhead: customRuntime.inheritBaseOverhead }
-              : {}),
-            ...(customRuntime.crioPullType !== undefined
-              ? { crio: { pullType: customRuntime.crioPullType } }
-              : {}),
-            containerd: {
-              snapshotter: customRuntimeSnapshotter(vendor, customRuntime),
-            },
-          },
-        ]),
-      ),
-    }
-  } else {
-    delete runtimeValues.customRuntimes
-  }
-  const requiredSnapshotters = new Set(
-    [
-      ...[...enabledShims].map((shimId) =>
-        vendor.runtime.shims.find(({ id }) => id === shimId)?.snapshotter,
-      ),
-      ...advanced.customRuntimes.map((customRuntime) =>
-        customRuntimeSnapshotter(vendor, customRuntime),
-      ),
-    ]
-      .filter(
-        (snapshotter): snapshotter is string =>
-          Boolean(snapshotter) && snapshotter !== 'default',
-      ),
-  )
-  if (advanced.installErofsUtils && requiredSnapshotters.has('erofs')) {
-    runtimeValues.nodeBinaries = {
-      ...(runtimeValues.nodeBinaries ?? {}),
-      'erofs-utils': {
-        image:
-          advanced.erofsUtilsImage.trim() ||
-          erofsUtilsImage,
-        binaries: ['mkfs.erofs'],
-        pullPolicy: 'IfNotPresent',
-      },
-    }
-  }
-  if (requiredSnapshotters.size === 0) {
-    delete runtimeValues.snapshotter
-    delete runtimeValues.containerd
-  } else if (runtimeValues.snapshotter) {
-    runtimeValues.snapshotter.setup = [...requiredSnapshotters]
-    if (requiredSnapshotters.has('erofs')) {
-      delete runtimeValues.snapshotter.erofsMergeMode
-      runtimeValues.snapshotter.erofsSnapshotterMode =
-        advanced.erofsSnapshotterMode
-      runtimeValues.snapshotter.erofsDmverity =
-        advanced.erofsDmverity
-      runtimeValues.containerd = {
-        ...(runtimeValues.containerd ?? {}),
-        userDropIn:
-          "[plugins.'io.containerd.snapshotter.v1.erofs']\n" +
-          `  enable_fsverity = ${advanced.erofsEnableFsverity}\n` +
-          (advanced.erofsSnapshotterMode === 'disk'
-            ? `  default_size = "${advanced.erofsDiskSize.trim() || '256M'}"\n`
-            : ''),
-      }
-    } else if (!requiredSnapshotters.has('erofs')) {
-      delete runtimeValues.snapshotter.erofsMergeMode
-      delete runtimeValues.snapshotter.erofsSnapshotterMode
-      delete runtimeValues.snapshotter.erofsDmverity
-      delete runtimeValues.containerd
-    }
-  }
-  if (runtimeValues['node-feature-discovery']) {
-    runtimeValues['node-feature-discovery'].enabled = false
-  }
-  const generatedContainerdDropIn = runtimeValues.containerd?.userDropIn
-  const customContainerdDropIn = advanced.containerdUserDropIn
-  const containerdUserDropIn =
-    typeof generatedContainerdDropIn === 'string' && customContainerdDropIn.trim()
-      ? `${generatedContainerdDropIn.trimEnd()}\n\n${customContainerdDropIn}`
-      : customContainerdDropIn.trim()
-        ? customContainerdDropIn
-        : generatedContainerdDropIn
-  const customContainerd =
-    cluster.distributionId === 'kubeadm'
-      ? {
-          ...(advanced.containerdConfigDir.trim()
-            ? { configDir: advanced.containerdConfigDir.trim() }
-            : {}),
-          ...(advanced.containerdRuntimeSocket.trim()
-            ? { runtimeSocket: advanced.containerdRuntimeSocket.trim() }
-            : {}),
-          ...(advanced.containerdConfigFileName.trim()
-            ? { configFileName: advanced.containerdConfigFileName.trim() }
-            : {}),
-          ...(containerdUserDropIn
-            ? { userDropIn: containerdUserDropIn }
-            : {}),
-        }
-      : {}
-  if (Object.keys(customContainerd).length > 0) {
-    runtimeValues.containerd = {
-      ...((runtimeValues.containerd as Record<string, unknown> | undefined) ?? {}),
-      ...customContainerd,
-    }
-  }
-  const nodeSelector = Object.fromEntries(
-    advanced.nodeSelector
-      .map(({ key, value }) => [key.trim(), value.trim()])
-      .filter(([key]) => key.length > 0),
-  )
-  if (Object.keys(nodeSelector).length > 0) {
-    runtimeValues.nodeSelector = nodeSelector
-  }
-  const nodeAffinity = advanced.nodeAffinity
-    .filter(({ key }) => key.trim().length > 0)
-    .map(({ key, operator, values }) => ({
-      key: key.trim(),
-      operator,
-      ...(['In', 'NotIn'].includes(operator)
-        ? {
-            values: values.map((value) => value.trim()).filter(Boolean),
-          }
-        : {}),
-    }))
-  if (nodeAffinity.length > 0) {
-    runtimeValues.affinity = {
-      nodeAffinity: {
-        requiredDuringSchedulingIgnoredDuringExecution: {
-          nodeSelectorTerms: [{ matchExpressions: nodeAffinity }],
-        },
-      },
-    }
-  }
-  const tolerations = advanced.tolerations
-    .filter(({ key }) => key.trim().length > 0)
-    .map(({ key, operator, value, effect }) => ({
-      key: key.trim(),
-      operator,
-      ...(operator === 'Equal' ? { value: value.trim() } : {}),
-      ...(effect ? { effect } : {}),
-    }))
-  if (tolerations.length > 0) {
-    runtimeValues.tolerations = tolerations
-  }
-  if (advanced.scheduledReconcileEnabled) {
-    runtimeValues.job = {
-      ...(runtimeValues.job ?? {}),
-      reconcile: {
-        enabled: true,
-        schedule: advanced.scheduledReconcileSchedule.trim() || '*/15 * * * *',
-      },
-    }
-  }
-  const kataDeployImages = advanced.images.kataDeploy
-  if (kataDeployImages.pullPolicy) {
-    runtimeValues.imagePullPolicy = kataDeployImages.pullPolicy
-  }
-  const pullSecrets = (configuration: ChartImageConfiguration) =>
-    configuration.pullSecrets
-      .map((name) => name.trim())
-      .filter(Boolean)
-      .map((name) => ({ name }))
-  const kataDeployPullSecrets = pullSecrets(kataDeployImages)
-  if (kataDeployPullSecrets.length > 0) {
-    runtimeValues.imagePullSecrets = kataDeployPullSecrets
-  }
-  const applyImageOverride = (
-    current: { reference?: string; tag?: string } | undefined,
-    reference: string,
-    tag: string,
-  ) => {
-    const trimmedReference = reference.trim()
-    const trimmedTag = tag.trim()
-    if (!trimmedReference && !trimmedTag) return current
-    return {
-      ...(current ?? {}),
-      ...(trimmedReference ? { reference: trimmedReference } : {}),
-      ...(trimmedTag ? { tag: trimmedTag } : {}),
-    }
-  }
-  runtimeValues.image = applyImageOverride(
-    runtimeValues.image,
-    kataDeployImages.reference,
-    kataDeployImages.tag,
-  )
-  runtimeValues.kubectlImage = applyImageOverride(
-    runtimeValues.kubectlImage,
-    kataDeployImages.kubectlReference,
-    kataDeployImages.kubectlTag,
-  )
-  const dispatcherImage = applyImageOverride(
-    runtimeValues.job?.dispatcherImage,
-    kataDeployImages.dispatcherReference,
-    kataDeployImages.dispatcherTag,
-  )
-  if (dispatcherImage) {
-    runtimeValues.job = {
-      ...(runtimeValues.job ?? {}),
-      dispatcherImage,
-    }
-  }
-  const {
-    k8sDistribution,
-    selinux,
-    ...remainingRuntimeValues
-  } = runtimeValues
-  const orderedRuntimeValues = {
-    ...(k8sDistribution ? { k8sDistribution } : {}),
-    selinux,
-    ...remainingRuntimeValues,
-  }
-  const dependencies = architecture.charts.krab.dependencies
-  const gpuPlatformSelected = vendor.hardwareFamilies.some((family) =>
-    family.availability === 'available' &&
-    family.modes.some(({ id }) => id === selections[family.id]?.modeId))
-  const components = resolveComponents(
-    vendor, selections, advanced.components, runtime, advanced.customRuntimes,
-  )
-  const includeDevicePlugin = components.devicePlugin
-  const includeProvisioner = components.provisioner
-  const nfdImages = advanced.images.nfd
-  const nfdValues = {
-    enabled: components.nfd,
-    image: {
-      ...architecture.charts.nfd.image,
-      ...(nfdImages.reference.trim()
-        ? { repository: nfdImages.reference.trim() }
-        : {}),
-      ...(nfdImages.tag.trim() ? { tag: nfdImages.tag.trim() } : {}),
-      ...(nfdImages.pullPolicy
-        ? { pullPolicy: nfdImages.pullPolicy }
-        : {}),
-    },
-    ...(pullSecrets(nfdImages).length > 0
-      ? { imagePullSecrets: pullSecrets(nfdImages) }
-      : {}),
-  }
-  const devicePluginImages = advanced.images.devicePlugin
-  const devicePluginValues = structuredClone(vendor.devicePlugin.values) as {
-    image?: { repository?: string; tag?: string; pullPolicy?: string }
-    imagePullSecrets?: Array<{ name: string }>
-  }
-  if (
-    devicePluginImages.reference.trim() ||
-    devicePluginImages.tag.trim() ||
-    devicePluginImages.pullPolicy
-  ) {
-    devicePluginValues.image = {
-      ...(devicePluginValues.image ?? {}),
-      ...(devicePluginImages.reference.trim()
-        ? { repository: devicePluginImages.reference.trim() }
-        : {}),
-      ...(devicePluginImages.tag.trim()
-        ? { tag: devicePluginImages.tag.trim() }
-        : {}),
-      ...(devicePluginImages.pullPolicy
-        ? { pullPolicy: devicePluginImages.pullPolicy }
-        : {}),
-    }
-  }
-  const devicePluginPullSecrets = pullSecrets(devicePluginImages)
-  if (devicePluginPullSecrets.length > 0) {
-    devicePluginValues.imagePullSecrets = devicePluginPullSecrets
-  }
-  const provisionerImages = advanced.images.provisioner
-  const provisionerValues = structuredClone(vendor.provisioner.values)
-  const provisionerImage = applyImageOverride(
-    provisionerValues.image,
-    provisionerImages.reference,
-    provisionerImages.tag,
-  )
-  const provisionerDispatcherImage = applyImageOverride(
-    provisionerValues.job.dispatcherImage,
-    provisionerImages.dispatcherReference,
-    provisionerImages.dispatcherTag,
-  )
-
-  return `# ${architecture.notice}\n# KRAB values format: ${valuesFormatVersion}\n# KRAB chart version: ${architecture.charts.krab.version}\n# KRAB selection: ${vendor.id}\n${yaml({
-    [dependencies.nvidiaValuesKey]: {
-      enabled: gpuPlatformSelected || includeDevicePlugin || includeProvisioner,
-    },
-    'intel-tdx-qgs': {
-      enabled: components.qgs,
-      ...(advanced.qgs.mode ? { tdxQuoteGenerationService: { mode: advanced.qgs.mode } } : {}),
-      ...(advanced.qgs.pcsApiKeySecretName.trim()
-        ? { pcsApiKey: { secretName: advanced.qgs.pcsApiKeySecretName.trim() } } : {}),
-      ...(advanced.qgs.deploySgxPlugin !== null
-        ? { 'intel-sgx-plugin': { enabled: advanced.qgs.deploySgxPlugin } } : {}),
-    },
-    [dependencies.nfdValuesKey]: nfdValues,
-    [dependencies.runtimeValuesKey]: { enabled: components.kataDeploy, ...orderedRuntimeValues },
-    [dependencies.devicePluginValuesKey]: { ...devicePluginValues, enabled: includeDevicePlugin },
-    ...((includeProvisioner || gpuPlatformSelected)
-      ? {
-          [dependencies.provisionerValuesKey]: {
-            ...provisionerValues,
-            enabled: includeProvisioner,
-            'node-feature-discovery': { enabled: false },
-            profiles,
-            ...(provisionerImage ? { image: provisionerImage } : {}),
-            ...(provisionerImages.pullPolicy
-              ? { imagePullPolicy: provisionerImages.pullPolicy }
-              : {}),
-            ...(pullSecrets(provisionerImages).length > 0
-              ? { imagePullSecrets: pullSecrets(provisionerImages) }
-              : {}),
-            ...(provisionerDispatcherImage
-              ? {
-                  job: {
-                    ...provisionerValues.job,
-                    dispatcherImage: provisionerDispatcherImage,
-                  },
-                }
-              : {}),
-          },
-        }
-      : { [dependencies.provisionerValuesKey]: { enabled: false } }),
-  })}`
 }
 
 export function normalizeDeploymentName(
@@ -1519,7 +1012,7 @@ export function buildCliConfiguration(
     erofsEnableFsverity, installErofsUtils, ...settings } = advanced
   return {
     apiVersion: 'krab/v1alpha1', vendor: vendor.id,
-    distribution: cluster.distributionId, release, namespace,
+    distribution: cluster.distributionId ?? '', release, namespace,
     architectures: cluster.architectures ?? [], selinux: cluster.selinuxEnabled,
     runtimes: runtime.selectedShimIds,
     hardware: Object.fromEntries(Object.entries(selections)
@@ -1544,4 +1037,9 @@ export function uncoveredRuntimeArchitectures(
   return architectures.filter((architecture) => !vendor.runtime.shims.some(
     ({ id, supportedArches }) => bases.has(id) && supportedArches.includes(architecture),
   ))
+}
+
+/** Read the node-derived CPU CC overlay through the same importer as the CLI. */
+export function importCpuCcOverlay(source: string, catalog: ExplorerCatalog): CustomRuntimeConfiguration[] {
+  return coreRequest('importCpuCc', undefined, catalog, JSON.parse(source))
 }

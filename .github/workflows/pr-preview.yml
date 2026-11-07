@@ -17,9 +17,12 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Install shared browser engine toolchain
+        run: rustup toolchain install 1.95.0 --profile minimal --target wasm32-unknown-unknown
       - name: Validate generated files
         run: |
           npm run generate
+          npm run build:core
           git diff --exit-code -- \
             package-lock.json charts/krab/Chart.yaml charts/krab/values.yaml \
             charts/precheck/Chart.yaml charts/precheck/values.yaml \

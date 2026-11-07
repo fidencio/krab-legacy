@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, Copy, Download, ExternalLink } from 'lucide-react'
 import { cliArchiveUrl, cliAssetBase, cliPlatforms, cliRepository } from './lib/cli-release'
 import recordings from './generated/walkthroughs.json'
+import cliReference from './generated/cli-reference.json'
 import './Documentation.css'
 
 const sections = [
   ['start', 'Start here'], ['install', 'Install KRAB'], ['website', 'Use the website'],
-  ['tui', 'Use the terminal editor'], ['cli', 'Automate with the CLI'],
+  ['tui', 'Use the terminal editor'], ['cpu-cc', 'NVIDIA CPU TDX / SNP'], ['cli', 'Automate with the CLI'],
   ['checks', 'Check your nodes'], ['reference', 'Command reference'],
 ] as const
+const cpuCcHelperUrl = new URL('../scripts/nvidia-cpu-cc.py', import.meta.url).href
 const shortcuts = [
   ['↑ / ↓', 'Move between choices and sections'], ['Space', 'Toggle a checkbox'],
   ['Enter', 'Confirm a choice or open a section'], ['Esc', 'Cancel a section and restore its previous settings'],
@@ -156,6 +158,37 @@ krab`}</Command></li>
         <Command>{`krab generate --config krab.yaml --output values.yaml`}</Command>
       </section>
 
+      <section id="docs/cpu-cc">
+        <h2>NVIDIA CPU TDX and SNP</h2>
+        <p>Run confidential CPU workloads using the NVIDIA guest stack, without attaching a GPU extension.
+          This release includes experimental CPU handlers built through Kata’s existing custom-runtime support.</p>
+        <ol className="docs-steps">
+          <li><strong>Prepare the profile from the installed reference configuration.</strong>
+            {' '}On a node with the matching Kata installation and Python 3.11 or newer,
+            {' '}<a href={cpuCcHelperUrl} download="nvidia-cpu-cc.py">download the CPU CC helper</a> and run:
+            <Command>python3 nvidia-cpu-cc.py --tee tdx &gt; nvidia-cpu-tdx.values.json</Command>
+            <p>Use <code>--tee snp</code> for SNP, or <code>--tee both</code> when both reference files exist.
+              The helper reads the installed configs without modifying the node. It preserves the confidential
+              boot settings, CoCo integrity metadata, and reference kernel arguments while removing the GPU guest extension.</p>
+          </li>
+          <li><strong>Import it in either interface.</strong> In a Custom or NVIDIA website path, choose
+            “Import NVIDIA CPU TDX / SNP” below the runtime choices and select the generated JSON file.
+            In your terminal:
+            <Command>{`krab import-cpu-cc --values nvidia-cpu-tdx.values.json --output cpu-cc.yaml
+krab edit --config cpu-cc.yaml
+krab generate --config cpu-cc.yaml --output values.yaml`}</Command>
+            <p>To merge with an existing native configuration, add <code>--config existing.yaml</code>
+              to the import command and save to a separate output.</p>
+          </li>
+          <li><strong>Review and test on the target hardware.</strong> Both interfaces use the same importer
+            and generator. They retain CPU TEE scheduling, inherited overhead, Nydus, and CRI-O guest-pull settings.
+            TDX selects QGS automatically. Importing a CPU handler alone does not enable GPU provisioning.</li>
+        </ol>
+        <p className="docs-note">Generate the overlay from the same Kata version and installation prefix used by
+          your nodes, and regenerate after an upgrade. These are custom handlers, not new upstream shim names.
+          Verify guest launch and attestation on compatible TDX/SNP hosts before running workloads.</p>
+      </section>
+
       <section id="docs/cli">
         <h2>Automate with the CLI</h2>
         <p>Explicit commands work without the editor. Configuration and values generation run offline.</p>
@@ -206,16 +239,12 @@ krab conformance --report node.json --require kvm --failed-nodes`}</Command>
 
       <section id="docs/reference">
         <h2>Keep these commands handy</h2>
-        <div className="docs-reference">
-          <code>krab</code><span>Open the interactive editor</span>
-          <code>krab edit --config FILE</code><span>Edit a saved configuration</span>
-          <code>krab list runtimes --json</code><span>Discover pinned runtime choices</span>
-          <code>krab list hardware --vendor nvidia --json</code><span>Discover GPU families and modes</span>
-          <code>krab validate --config FILE</code><span>Validate offline</span>
-          <code>krab generate --config FILE</code><span>Print Helm values</span>
-          <code>krab completions zsh</code><span>Generate shell completion definitions</span>
-          <code>krab conformance --help</code><span>All conformance options</span>
-        </div>
+        <p>These help pages are generated from the actual KRAB binary.</p>
+        <div className="docs-reference">{cliReference.commands.map(command =>
+          <details key={command.name}>
+            <summary><code>krab {command.name}</code><span>{command.about}</span></summary>
+            <pre>{command.help}</pre>
+          </details>)}</div>
         <p>Exit codes: <strong>0</strong> success; <strong>1</strong> failed checks or nonconformance;
           <strong>2</strong> invalid configuration, collection, I/O, or deployment error.</p>
         <p className="docs-source">This guide and its recordings live in the KRAB repository.

@@ -3,7 +3,8 @@
 The native Rust interface to Kata Reference Architecture Builder.
 The binary embeds the same pinned catalog, chart version, and values schema as
 the web builder. Configuration validation and values generation run offline;
-Node.js is only needed by the development comparison tests.
+The browser compiles the same Rust configuration engine to WebAssembly.
+Node.js is only needed for website development and comparison tests.
 
 ## Download and install
 
@@ -198,6 +199,29 @@ The `Native CLI` workflow tests and packages all three host platforms. The relea
 workflow requires these builds and CLI/web values parity before publishing the
 archives alongside the chart and website in the same versioned GitHub release.
 
+## NVIDIA CPU TDX / SNP
+
+The experimental CPU confidential runtime work is included in this release.
+Use the bundled `nvidia-cpu-cc.py` helper with Python 3.11+ and the installed,
+matching Kata reference configurations, then import its overlay:
+
+```sh
+python3 nvidia-cpu-cc.py --tee tdx > nvidia-cpu-tdx.values.json
+krab import-cpu-cc --values nvidia-cpu-tdx.values.json --output cpu-cc.yaml
+krab edit --config cpu-cc.yaml
+krab generate --config cpu-cc.yaml --output values.yaml
+```
+
+Use `--tee snp` or `--tee both` for the other variants. Importing with `--config`
+merges profiles into an existing configuration; choose a separate output file.
+The website's **Import NVIDIA CPU TDX / SNP** uses the same Rust importer.
+The helper preserves confidential boot settings and CoCo integrity metadata
+while removing the GPU guest extension. These remain custom handlers based on
+the installed NVIDIA GPU reference configurations, with CPU-only scheduling.
+See [the on-site guide](https://fidencio.github.io/krab/#docs/cpu-cc) or
+[CPU confidential workloads](../docs/nvidia-cpu-confidential.md) for the exact
+workflow and hardware validation requirements.
+
 ## Discover choices
 
 ```sh
@@ -359,6 +383,7 @@ cargo test --locked --manifest-path cli/Cargo.toml
 cargo test --locked --manifest-path preflight/Cargo.toml
 cargo build --locked --manifest-path cli/Cargo.toml
 python3 cli/tests/terminal.py cli/target/debug/krab
+npm run build:core
 npm run test:cli-parity
 ```
 

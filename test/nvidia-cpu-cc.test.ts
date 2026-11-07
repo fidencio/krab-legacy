@@ -138,3 +138,25 @@ test('KRAB round-trips CPU CC custom runtimes and preserves their deployment req
   assert.equal(withGpu['kata-deploy'].shims['qemu-nvidia-gpu-tdx-runtime-rs'].nvrc.enableDCGM, true)
   assert.deepEqual(withGpu['kata-deploy'].customRuntimes, original)
 })
+
+test('the shared importer loads the complete CPU overlay and rejects a GPU or mismatched TEE class', async (t) => {
+  const { importCpuCcOverlay } = await import('../src/lib/artifacts.ts')
+  const directory = prepare(t)
+  const generated = generate(directory)
+  assert.equal(generated.status, 0, generated.stderr)
+  const profiles = importCpuCcOverlay(generated.stdout, catalogData as ExplorerCatalog)
+  assert.equal(profiles.length, 2)
+  for (const profile of profiles) {
+    assert.equal(profile.crioPullType, 'guest-pull')
+    assert.equal(profile.inheritBaseOverhead, true)
+    assert.ok(profile.dropIn.includes(cocohash))
+    assert.ok(profile.name.startsWith('qemu-nvidia-cpu-'))
+  }
+  const wrong = JSON.parse(generated.stdout)
+  wrong['kata-deploy'].customRuntimes.runtimes['qemu-nvidia-cpu-tdx-runtime-rs'].runtimeClass =
+    wrong['kata-deploy'].customRuntimes.runtimes['qemu-nvidia-cpu-snp-runtime-rs'].runtimeClass
+  assert.throws(() => importCpuCcOverlay(JSON.stringify(wrong), catalogData as ExplorerCatalog), /CPU-only scheduling/)
+  const gpu = JSON.parse(generated.stdout)
+  gpu['kata-deploy'].customRuntimes.runtimes['qemu-nvidia-cpu-tdx-runtime-rs'].baseConfig = 'qemu-nvidia-gpu-runtime-rs'
+  assert.throws(() => importCpuCcOverlay(JSON.stringify(gpu), catalogData as ExplorerCatalog), /CPU CC base/)
+})

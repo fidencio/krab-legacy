@@ -31,6 +31,9 @@ export async function syncReleaseVersion(root = resolve(import.meta.dirname, '..
   const prerelease = match[1] !== undefined
 
   for (const [path, section, name, pattern] of [
+    ['core/Cargo.toml', '[package]', 'krab-core', /^\[package\]\nname = "krab-core"\nversion = "[^"]*"$/gm],
+    ['core/Cargo.lock', '[[package]]', 'krab-core', /^\[\[package\]\]\nname = "krab-core"\nversion = "[^"]*"$/gm],
+    ['cli/Cargo.lock', '[[package]]', 'krab-core', /^\[\[package\]\]\nname = "krab-core"\nversion = "[^"]*"$/gm],
     ['cli/Cargo.toml', '[package]', 'krab', /^\[package\]\nname = "krab"\nversion = "[^"]*"$/gm],
     ['cli/Cargo.lock', '[[package]]', 'krab', /^\[\[package\]\]\nname = "krab"\nversion = "[^"]*"$/gm],
     ['cli/Cargo.lock', '[[package]]', 'krab-preflight', /^\[\[package\]\]\nname = "krab-preflight"\nversion = "[^"]*"$/gm],

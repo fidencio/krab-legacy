@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(default, rename_all = "camelCase", deny_unknown_fields)]
 pub struct Advanced {
     pub qgs: Qgs,
@@ -24,6 +24,28 @@ pub struct Advanced {
     pub images: Images,
     pub debug: bool,
 }
+impl Default for Advanced {
+    fn default() -> Self {
+        Self {
+            qgs: Qgs::default(),
+            containerd_config_dir: String::new(),
+            containerd_runtime_socket: String::new(),
+            containerd_config_file_name: String::new(),
+            containerd_user_drop_in: String::new(),
+            shim_drop_ins: BTreeMap::new(),
+            custom_runtimes: Vec::new(),
+            erofs_utils_image: String::new(),
+            node_selector: Vec::new(),
+            node_affinity: Vec::new(),
+            tolerations: Vec::new(),
+            scheduled_reconcile_enabled: false,
+            scheduled_reconcile_schedule: "*/15 * * * *".into(),
+            images: Images::default(),
+            debug: false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 #[serde(default, rename_all = "camelCase", deny_unknown_fields)]
 pub struct Qgs {

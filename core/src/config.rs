@@ -260,9 +260,11 @@ impl Config {
 
     pub fn shims<'a>(&self, vendor: &'a Value) -> Result<Vec<&'a Value>> {
         let mut ids = self.runtimes.clone();
-        for (id, selection) in &self.hardware {
-            let family = find(&vendor["hardwareFamilies"], id)?;
-            find(&family["modes"], &selection.mode)?;
+        for family in items(&vendor["hardwareFamilies"]) {
+            let Some(selection) = self.hardware.get(text(&family["id"])) else {
+                continue;
+            };
+            let mode = find(&family["modes"], &selection.mode)?;
             if selection.mode == "off" {
                 let base = items(&vendor["runtime"]["shims"])
                     .iter()
@@ -271,6 +273,9 @@ impl Config {
                 ids.push(text(&base["id"]).into());
             } else {
                 for tee in &selection.cpu_tees {
+                    if !items(&mode["supportedCpuTeeIds"]).contains(&json!(tee)) {
+                        continue;
+                    }
                     ids.push(text(&find(&vendor["runtime"]["cpuTees"], tee)?["shimId"]).into());
                 }
             }

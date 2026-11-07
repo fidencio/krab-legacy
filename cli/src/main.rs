@@ -1,12 +1,10 @@
-mod advanced;
+use krab_core::{config, values};
 mod checks;
 mod cluster_ui;
-mod config;
 mod edit;
 mod editor;
 mod logo;
 mod tui;
-mod values;
 
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use config::{catalog, find, items, text, Config, Result};
@@ -63,6 +61,18 @@ enum Action {
         /// Go directly to advanced settings using the starter configuration.
         #[arg(long)]
         advanced: bool,
+    },
+    /// Import a node-derived NVIDIA CPU TDX/SNP overlay into a KRAB configuration.
+    ImportCpuCc {
+        #[arg(long)]
+        values: PathBuf,
+        /// Merge into an existing configuration; otherwise create a CPU-only starter.
+        #[arg(long)]
+        config: Option<PathBuf>,
+        #[arg(short, long, default_value = "krab.yaml")]
+        output: PathBuf,
+        #[arg(long)]
+        force: bool,
     },
     /// Discover pinned choices; JSON retains complete catalog metadata.
     List {
@@ -229,19 +239,7 @@ fn list(catalog: &Value, resource: Resource, vendor: Option<String>, as_json: bo
 }
 
 fn init(catalog: &Value, vendor_id: &str, distribution: &str, arch: &str) -> Result<Config> {
-    let vendor = find(&catalog["vendors"], vendor_id)?;
-    let runtimes = items(&vendor["runtime"]["shims"]);
-    let shim = runtimes.iter().find(|s| {
-        items(&s["supportedArches"]).contains(&json!(arch)) &&
-            if vendor_id == "custom" { s["id"] == "qemu-runtime-rs" } else { s["userSelectable"] == true || items(&vendor["hardwareFamilies"]).is_empty() }
-    }).ok_or("No starter runtime for this vendor/architecture; use 'krab list runtimes --json' to construct a configuration")?;
-    let config: Config = serde_json::from_value(json!({
-        "apiVersion": "krab/v1alpha1", "vendor": vendor_id, "distribution": distribution,
-        "architectures": [arch], "runtimes": [shim["id"]]
-    }))
-    .map_err(|e| e.to_string())?;
-    values::build(&config, catalog)?;
-    Ok(config)
+    krab_core::starter(catalog, vendor_id, distribution, arch)
 }
 
 fn install(config: &Config, catalog: &Value, context: &str, execute: bool) -> Result<()> {
@@ -298,6 +296,21 @@ fn install(config: &Config, catalog: &Value, context: &str, execute: bool) -> Re
 fn run(action: Action) -> Result<()> {
     let catalog = catalog();
     match action {
+        Action::ImportCpuCc {
+            values,
+            config,
+            output: path,
+            force,
+        } => {
+            let source =
+                fs::read_to_string(&values).map_err(|e| format!("{}: {e}", values.display()))?;
+            let overlay: Value = serde_yaml_ng::from_str(&source)
+                .map_err(|e| format!("Invalid CPU CC overlay: {e}"))?;
+            let existing = config.as_deref().map(read_config).transpose()?;
+            let config = krab_core::cpu_cc::configuration(&overlay, &catalog, existing)?;
+            let source = serde_yaml_ng::to_string(&config).map_err(|e| e.to_string())?;
+            output(Some(&path), &source, force)
+        }
         Action::Edit {
             config: path,
             output: destination,

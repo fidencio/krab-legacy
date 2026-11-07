@@ -41,6 +41,7 @@ jobs:
         shell: bash
         run: |
           rustup toolchain install 1.95.0 --profile minimal --component rustfmt --component clippy --target '${{ matrix.target }}'
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
           krab_sysroot="$(rustc +1.95.0 --print sysroot)"
           krab_host="$(rustc +1.95.0 -vV | sed -n 's/^host: //p')"
           echo "${krab_sysroot}/lib/rustlib/${krab_host}/bin" >> "${GITHUB_PATH}"
@@ -48,6 +49,7 @@ jobs:
         working-directory: cli
         run: |
           cargo +1.95.0 fmt --check
+          cargo +1.95.0 fmt --check --manifest-path ../core/Cargo.toml
           cargo +1.95.0 clippy --locked --all-targets --target ${{ matrix.target }} -- -D warnings
           cargo +1.95.0 test --locked --target ${{ matrix.target }}
           cargo +1.95.0 build --release --locked --target ${{ matrix.target }}
@@ -55,6 +57,10 @@ jobs:
         run: |
           python3 cli/tests/terminal.py cli/target/${{ matrix.target }}/release/krab
           python3 cli/tests/cluster-terminal.py cli/target/${{ matrix.target }}/release/krab
+      - name: Build shared browser engine
+        run: npm run build:core
+      - name: Verify website command reference against the actual CLI
+        run: python3 scripts/generate-cli-reference.py --binary 'cli/target/${{ matrix.target }}/release/krab' --check
       - name: Compare CLI and web builder values
         env:
           KRAB_CLI_BINARY: cli/target/${{ matrix.target }}/release/krab

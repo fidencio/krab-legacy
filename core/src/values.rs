@@ -13,7 +13,38 @@ pub fn merge(target: &mut Value, overlay: &Value) {
 }
 
 pub fn build(config: &Config, catalog: &Value) -> Result<Value> {
-    let vendor = config.validate(catalog)?;
+    build_inner(config, catalog, true)
+}
+
+/// Drafts may be incomplete while the user edits; only validated configurations
+/// can be downloaded or deployed. Generation itself is shared with build().
+pub fn preview(config: &Config, catalog: &Value) -> Result<Value> {
+    let mut draft = config.clone();
+    let vendor = find(&catalog["vendors"], &draft.vendor)?;
+    draft.hardware.retain(|id, selection| {
+        let Ok(family) = find(&vendor["hardwareFamilies"], id) else {
+            return false;
+        };
+        if family["availability"] != "available" {
+            return false;
+        }
+        let Ok(mode) = find(&family["modes"], &selection.mode) else {
+            return false;
+        };
+        selection
+            .cpu_tees
+            .retain(|tee| items(&mode["supportedCpuTeeIds"]).contains(&json!(tee)));
+        true
+    });
+    build_inner(&draft, catalog, false)
+}
+
+fn build_inner(config: &Config, catalog: &Value, validate: bool) -> Result<Value> {
+    let vendor = if validate {
+        config.validate(catalog)?
+    } else {
+        find(&catalog["vendors"], &config.vendor)?
+    };
     let architecture = &catalog["plannedArchitecture"];
     let shims = config.shims(vendor)?;
     let gpu = !config.hardware.is_empty();
@@ -32,7 +63,11 @@ pub fn build(config: &Config, catalog: &Value) -> Result<Value> {
     runtime["debug"] = json!(false);
     runtime["k8sDistribution"] = find(
         &architecture["cluster"]["distributions"],
-        &config.distribution,
+        if !validate && config.distribution.is_empty() {
+            "kubeadm"
+        } else {
+            &config.distribution
+        },
     )?["kataDeployValue"]
         .clone();
     runtime["selinux"] = json!({"enabled": config.selinux});
@@ -57,18 +92,19 @@ pub fn build(config: &Config, catalog: &Value) -> Result<Value> {
         selected[id] = value;
     }
     runtime["shims"] = selected;
-    let arches: Vec<String> = if config.vendor == "custom" {
-        config.architectures.clone()
-    } else {
-        shims
-            .iter()
-            .flat_map(|s| {
-                items(&s["supportedArches"])
-                    .iter()
-                    .map(|a| text(a).to_string())
-            })
-            .collect()
-    };
+    let arches: Vec<String> =
+        if config.vendor == "custom" && (!config.architectures.is_empty() || validate) {
+            config.architectures.clone()
+        } else {
+            shims
+                .iter()
+                .flat_map(|s| {
+                    items(&s["supportedArches"])
+                        .iter()
+                        .map(|a| text(a).to_string())
+                })
+                .collect()
+        };
     let mut defaults = json!({});
     for arch in arches {
         let candidates: Vec<_> = shims
@@ -237,15 +273,103 @@ pub fn build(config: &Config, catalog: &Value) -> Result<Value> {
     Ok(values)
 }
 
-pub fn render(config: &Config, catalog: &Value) -> Result<String> {
-    let values = build(config, catalog)?;
+/// Quote YAML 1.1-only scalar forms that YAML 1.2 serializers may leave bare.
+/// Helm consumes YAML 1.1, while literal block contents must stay untouched.
+pub fn yaml(value: &Value) -> Result<String> {
+    let source = serde_yaml_ng::to_string(value).map_err(|e| e.to_string())?;
+    fn ambiguous(word: &str) -> bool {
+        matches!(
+            word,
+            "y" | "Y"
+                | "yes"
+                | "Yes"
+                | "YES"
+                | "n"
+                | "N"
+                | "no"
+                | "No"
+                | "NO"
+                | "on"
+                | "On"
+                | "ON"
+                | "off"
+                | "Off"
+                | "OFF"
+        ) || (word.len() >= 10
+            && word.as_bytes()[4] == b'-'
+            && word.as_bytes()[7] == b'-'
+            && word[..4].bytes().all(|c| c.is_ascii_digit()))
+            || (word.contains(':')
+                && word
+                    .bytes()
+                    .all(|c| c.is_ascii_digit() || b":+-.".contains(&c)))
+            || (word.contains('_')
+                && word
+                    .bytes()
+                    .all(|c| c.is_ascii_digit() || b"_+-.".contains(&c)))
+    }
+    let mut block_indent = None;
+    let mut output = String::new();
+    for line in source.lines() {
+        let rest = line.trim_start();
+        let indent = line.len() - rest.len();
+        if block_indent.is_some_and(|base| rest.is_empty() || indent > base) {
+            output.push_str(line);
+            output.push('\n');
+            continue;
+        }
+        block_indent = None;
+        let (sequence, content) = rest.strip_prefix("- ").map_or(("", rest), |v| ("- ", v));
+        let (key, scalar) = content
+            .split_once(": ")
+            .map_or((None, content), |(key, scalar)| (Some(key), scalar));
+        if scalar.starts_with(['|', '>'])
+            && scalar[1..].bytes().all(|c| b"+-0123456789".contains(&c))
+        {
+            block_indent = Some(
+                indent
+                    + if !sequence.is_empty() && key.is_some() {
+                        2
+                    } else {
+                        0
+                    },
+            );
+        }
+        output.push_str(&line[..indent]);
+        output.push_str(sequence);
+        if let Some(key) = key {
+            if ambiguous(key) {
+                output.push_str(&serde_json::to_string(key).map_err(|e| e.to_string())?);
+            } else {
+                output.push_str(key);
+            }
+            output.push_str(": ");
+        }
+        if ambiguous(scalar) {
+            output.push_str(&serde_json::to_string(scalar).map_err(|e| e.to_string())?);
+        } else {
+            output.push_str(scalar);
+        }
+        output.push('\n');
+    }
+    Ok(output)
+}
+
+fn render_values(config: &Config, catalog: &Value, values: &Value) -> Result<String> {
     let architecture = &catalog["plannedArchitecture"];
-    let body = serde_yaml_ng::to_string(&values).map_err(|e| e.to_string())?;
     Ok(format!(
         "# {}\n# KRAB values format: 2\n# KRAB chart version: {}\n# KRAB selection: {}\n{}",
         text(&architecture["notice"]),
         text(&architecture["charts"]["krab"]["version"]),
         config.vendor,
-        body
+        yaml(values)?
     ))
+}
+
+pub fn render(config: &Config, catalog: &Value) -> Result<String> {
+    render_values(config, catalog, &build(config, catalog)?)
+}
+
+pub fn render_preview(config: &Config, catalog: &Value) -> Result<String> {
+    render_values(config, catalog, &preview(config, catalog)?)
 }

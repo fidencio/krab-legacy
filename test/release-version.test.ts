@@ -12,6 +12,8 @@ const files = [
   'package-lock.json',
   'preflight/Cargo.toml',
   'preflight/Cargo.lock',
+  'core/Cargo.toml',
+  'core/Cargo.lock',
   'cli/Cargo.toml',
   'cli/Cargo.lock',
   'charts/krab/Chart.yaml',
@@ -49,6 +51,9 @@ test('one package version bump updates every release copy', async () => {
       assert.deepEqual(await Promise.all(files.map(read)), first)
 
       const lock = JSON.parse(await read('package-lock.json'))
+      assert.equal((await read('core/Cargo.toml')).match(/^version = "([^"]+)"$/m)?.[1], version)
+      assert.equal((await read('core/Cargo.lock')).match(/name = "krab-core"\nversion = "([^"]+)"/)?.[1], version)
+      assert.equal((await read('cli/Cargo.lock')).match(/name = "krab-core"\nversion = "([^"]+)"/)?.[1], version)
       const chart = parse(await read('charts/krab/Chart.yaml'))
       const precheck = parse(await read('charts/precheck/Chart.yaml'))
       const architecture = parse(await read('upstream/architecture.yaml'))

@@ -20,7 +20,12 @@
     "test:helm": "tsx --test test/helm-render.ts test/helm-nvidia-cpu-cc.ts",
     "test:controller:render": "tsc -p controller/tsconfig.json && tsx --test tests-controller/*.test.ts",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:core": "python3 scripts/build-core.py",
+    "prebuild": "node scripts/verify-core.mjs",
+    "pretest": "node scripts/verify-core.mjs",
+    "pretest:cli-parity": "node scripts/verify-core.mjs",
+    "predev": "node scripts/verify-core.mjs"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,

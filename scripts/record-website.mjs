@@ -27,17 +27,27 @@ try {
   await pause(1400)
   const frames=[]
   const capture=async(caption,keys,seconds=4)=>{const shot=await page('Page.captureScreenshot',{format:'png'});frames.push({caption,keys,seconds,image:shot.data})}
+  // Pause on the actual target before activating it so viewers can follow clicks.
+  const cue=async(expression,caption,keys)=>{
+    await action(`{const target=(${expression});if(!target)throw Error('Walkthrough target missing');target.scrollIntoView({behavior:'instant',block:'center'});const rect=target.getBoundingClientRect();const cue=document.createElement('div');cue.id='krab-recording-cue';Object.assign(cue.style,{position:'fixed',left:(rect.left-6)+'px',top:(rect.top-6)+'px',width:(rect.width+12)+'px',height:(rect.height+12)+'px',border:'3px solid #ff8a70',borderRadius:'10px',boxShadow:'0 0 0 4px #101b2be6',pointerEvents:'none',zIndex:'2147483647'});document.body.append(cue)}`)
+    await capture(caption,keys,3)
+    await action(`document.getElementById('krab-recording-cue').remove()`)
+  }
   await capture('Start with the builder. The header gives you documentation, theme, and release choices.','')
   await action(`document.querySelector('.platform-directory').scrollIntoView({behavior:'instant'})`)
-  await capture('Choose Custom to combine runtime and hardware paths, or start with a vendor path.','Choose a deployment path')
+  await cue(`document.querySelector('.platform-row')`,'Choose Custom to combine runtime and hardware paths, or start with a vendor path.','Click Custom')
   await action(`document.querySelector('.platform-row').click()`)
   await capture('The configuration page starts with target architectures and the Kubernetes distribution.','Custom')
+  await cue(`document.querySelector('.custom-architecture-options input').closest('label')`,'Choose the architecture of your target nodes.','Click AMD64')
   await action(`document.querySelector('.custom-architecture-options input').click();document.querySelector('.distribution-select-trigger').click()`)
+  await cue(`[...document.querySelectorAll('.distribution-select-options button')].find(b=>b.textContent.toLowerCase().includes('kubeadm'))`,'Select the Kubernetes distribution used by your cluster.','Click kubeadm')
   await action(`[...document.querySelectorAll('.distribution-select-options button')].find(b=>b.textContent.toLowerCase().includes('kubeadm')).click()`)
+  await cue(`[...document.querySelectorAll('.local-runtime-grid label')].find(l=>l.querySelector('strong')?.textContent==='QEMU')`,'Choose a runtime. The highlighted option is QEMU.','Click QEMU')
   await action(`const label=[...document.querySelectorAll('.local-runtime-grid label')].find(l=>l.querySelector('strong')?.textContent==='QEMU');if(!label)throw Error('Base QEMU runtime missing');label.querySelector('input').click();label.scrollIntoView({behavior:'instant',block:'center'})`)
   await capture('Select the runtime you want to install. KRAB checks the architecture coverage as you choose.','AMD64 · kubeadm · QEMU')
   await action(`document.querySelector('.deploy-section').scrollIntoView({behavior:'instant'})`)
   await capture('Review the version-pinned Helm command and generated values before deploying.','Review the output')
+  await cue(`[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Continue in TUI / CLI'))`,'Export the same configuration to continue in your terminal.','Click Continue in TUI / CLI')
   await action(`URL.createObjectURL=blob=>{window.__exported=blob.text();return 'blob:recording'};document.addEventListener('click',e=>{if(e.target.closest('a[download]'))e.preventDefault()});const button=[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Continue in TUI / CLI'));if(!button)throw Error('Native export unavailable');button.scrollIntoView({behavior:'instant',block:'center'});button.click()`)
   const config=await page('Runtime.evaluate',{expression:'window.__exported',awaitPromise:true,returnByValue:true})
   if(JSON.parse(config.result.value).distribution!=='kubeadm')throw Error('Export lost distribution')

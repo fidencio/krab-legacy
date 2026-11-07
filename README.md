@@ -330,12 +330,26 @@ When cutting a release, dispatch the chart release workflow from `main`.
 ```sh
 npm ci
 npm run generate
+npm run build:core
 npm test
 npm run test:chart
 helm dependency update charts/krab
 npm run test:helm
 npm run dev
 ```
+
+The CLI and website share `core/`, compiled natively and to WebAssembly. The
+browser runs the same Rust defaults, selection validation, chart-schema
+validator, values generator, and CPU CC importer. GitHub Pages serves the build
+as static files; no server or CLI process is needed for visitors.
+
+Website development needs Rust 1.95.0 with the `wasm32-unknown-unknown` target.
+`npm run build:core` builds the engine and prepares version-matched wasm-bindgen
+bindings, verifying the upstream tool download checksum when needed. Generated
+binaries and bindings are ignored by Git; every CI website build recreates them.
+Build/test/dev guards reject stale engine inputs or altered generated binaries.
+See [`core/README.md`](core/README.md) for the workflow, including CLI-generated
+command documentation.
 
 To refetch every locked source and verify its checksum:
 
@@ -399,6 +413,7 @@ The EROFS image has a separate lock. Update and check it with:
 npm run refresh:erofs-image
 npm run verify:erofs-image
 npm run generate
+npm run build:core
 npm test
 npm run build
 ```
@@ -408,6 +423,7 @@ To roll back a merged upstream update, revert its PR commit in a new PR:
 ```sh
 git revert UPDATE_COMMIT
 npm run generate
+npm run build:core
 npm test
 npm run build
 git diff --exit-code

@@ -13,6 +13,11 @@ All notable changes to KRAB are documented in this file.
 - Compact website download strip with links pinned to its release.
 - Export website configurations to the terminal with every advanced setting,
   including QGS, custom runtimes, scheduling, containerd, and image overrides.
+- Shared Rust configuration engine compiled natively for the CLI and to WebAssembly
+  for the browser; defaults, validation, and values generation share one source.
+- Command reference generated directly from actual CLI help output.
+- NVIDIA CPU TDX/SNP overlay imports in the website and CLI, with the existing
+  node-derived helper and guide included in release packages.
 - Release publication requires passing native builds and CLI/web values parity.
 
 ### Changed

@@ -1,0 +1,88 @@
+"""Build the browser engine from the exact Rust library and validator used by the CLI."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import shutil
+import subprocess
+import tarfile
+import urllib.request
+
+
+def source_files(root):
+    return sorted([*root.glob('core/src/**/*.rs'), root/'core/Cargo.toml', root/'core/Cargo.lock',
+                   root/'scripts/build-core.py', root/'src/generated/catalog.json',
+                   root/'charts/krab/values.schema.json', root/'upstream/erofs-utils-image.lock.json'])
+
+
+def binding_tool(root, supplied):
+    version = re.search(r'name = "wasm-bindgen"\nversion = "([^"]+)"',
+                        (root/'core/Cargo.lock').read_text()).group(1)
+    if supplied:
+        executable = Path(supplied).resolve()
+    elif shutil.which('wasm-bindgen') and subprocess.check_output([shutil.which('wasm-bindgen'), '--version'], text=True).strip() == f'wasm-bindgen {version}':
+        executable = Path(shutil.which('wasm-bindgen'))
+    else:
+        architecture = {'arm64': 'aarch64', 'aarch64': 'aarch64', 'x86_64': 'x86_64'}.get(platform.machine())
+        system = {'Darwin': 'apple-darwin', 'Linux': 'unknown-linux-musl'}.get(platform.system())
+        if not architecture or not system:
+            raise RuntimeError('Supply a matching wasm-bindgen with --bindgen on this development host')
+        name = f'wasm-bindgen-{version}-{architecture}-{system}'
+        destination = root/'core/target/tools'
+        executable = destination/name/'wasm-bindgen'
+        if not executable.exists():
+            destination.mkdir(parents=True, exist_ok=True)
+            base = f'https://github.com/wasm-bindgen/wasm-bindgen/releases/download/{version}/{name}.tar.gz'
+            def download(url):
+                with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent':'KRAB-build'})) as response:
+                    return response.read()
+            archive = download(base)
+            expected = download(base+'.sha256sum').decode().split()[0]
+            if hashlib.sha256(archive).hexdigest() != expected:
+                raise RuntimeError('wasm-bindgen download checksum mismatch')
+            path = destination/(name+'.tar.gz')
+            path.write_bytes(archive)
+            with tarfile.open(path) as tar:
+                for member in tar.getmembers():
+                    if member.name.startswith('/') or '..' in Path(member.name).parts or member.issym() or member.islnk():
+                        raise RuntimeError('Unsafe wasm-bindgen archive member')
+                tar.extractall(destination)
+            executable.chmod(0o755)
+    actual = subprocess.check_output([executable, '--version'], text=True).strip()
+    if actual != f'wasm-bindgen {version}':
+        raise RuntimeError(f'Expected wasm-bindgen {version}, got {actual}')
+    return executable
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--toolchain', default='1.95.0')
+    parser.add_argument('--bindgen', default=os.environ.get('KRAB_WASM_BINDGEN'))
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parents[1]
+    subprocess.run(['cargo', f'+{args.toolchain}', 'build', '--locked', '--release',
+                    '--manifest-path', str(root/'core/Cargo.toml'), '--target', 'wasm32-unknown-unknown'], cwd=root, check=True)
+    binary = root/'core/target/wasm32-unknown-unknown/release/krab_core.wasm'
+    output = root/'src/generated/engine'
+    output.mkdir(parents=True, exist_ok=True)
+    subprocess.run([binding_tool(root, args.bindgen), '--target', 'web', '--out-dir', str(output),
+                    '--out-name', 'engine', str(binary)], check=True)
+    digest = hashlib.sha256()
+    for path in source_files(root):
+        digest.update(path.relative_to(root).as_posix().encode()+b'\0'+path.read_bytes())
+    metadata = {
+        'version': json.loads((root/'package.json').read_text())['version'],
+        'sourceSha256': digest.hexdigest(),
+        'wasmSha256': hashlib.sha256((output/'engine_bg.wasm').read_bytes()).hexdigest(),
+        'bindingsSha256': hashlib.sha256((output/'engine.js').read_bytes()).hexdigest(),
+        'rustc': subprocess.check_output(['rustc', f'+{args.toolchain}', '--version'], text=True).strip(),
+    }
+    (root/'src/generated/core-build.json').write_text(json.dumps(metadata, indent=2)+'\n')
+    print(f'Built shared browser engine and validator: {(output/"engine_bg.wasm").stat().st_size} bytes')
+
+
+if __name__ == '__main__':
+    main()

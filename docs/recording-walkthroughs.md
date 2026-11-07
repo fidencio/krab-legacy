@@ -10,6 +10,8 @@ reuses the terminal integration-test driver and decodes actual terminal output,
 including cursor updates and colors. The website clip captures the actual local
 builder while selecting Custom, amd64, kubeadm, and QEMU and exporting its
 configuration. No cluster or deployment is simulated in these clips.
+Before each website action, a visible outline highlights the actual button or
+option to click, with a short pause and a matching caption.
 
 To regenerate after a UI or CLI change, use a built Unix CLI and Chrome:
 

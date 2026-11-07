@@ -29,3 +29,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+/core/target/
+
+/src/generated/krab-core.wasm
+/src/generated/core-build.json
+
+/src/generated/engine/

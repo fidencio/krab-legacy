@@ -72,7 +72,7 @@
   "website": {
     "title": "Navigate the website builder",
     "version": "KRAB 0.2.8",
-    "duration": 24,
+    "duration": 35,
     "steps": [
       {
         "caption": "Start with the builder. The header gives you documentation, theme, and release choices.",
@@ -80,11 +80,23 @@
       },
       {
         "caption": "Choose Custom to combine runtime and hardware paths, or start with a vendor path.",
-        "keys": "Choose a deployment path"
+        "keys": "Click Custom"
       },
       {
         "caption": "The configuration page starts with target architectures and the Kubernetes distribution.",
         "keys": "Custom"
+      },
+      {
+        "caption": "Choose the architecture of your target nodes.",
+        "keys": "Click AMD64"
+      },
+      {
+        "caption": "Select the Kubernetes distribution used by your cluster.",
+        "keys": "Click kubeadm"
+      },
+      {
+        "caption": "Choose a runtime. The highlighted option is QEMU.",
+        "keys": "Click QEMU"
       },
       {
         "caption": "Select the runtime you want to install. KRAB checks the architecture coverage as you choose.",
@@ -93,6 +105,10 @@
       {
         "caption": "Review the version-pinned Helm command and generated values before deploying.",
         "keys": "Review the output"
+      },
+      {
+        "caption": "Export the same configuration to continue in your terminal.",
+        "keys": "Click Continue in TUI / CLI"
       },
       {
         "caption": "Download values for Helm, or export krab.json to keep working in the TUI and CLI.",
