@@ -13,3 +13,6 @@ mod engine;
 pub mod values;
 #[cfg(feature = "configuration")]
 pub use engine::{request, starter};
+
+#[cfg(feature = "configuration")]
+pub mod product;

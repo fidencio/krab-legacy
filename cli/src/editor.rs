@@ -203,7 +203,10 @@ impl<R: BufRead, W: Write> Prompts<R, W> {
         }
     }
 
-    fn advanced(&mut self, config: &mut Config) -> Result<()> {
+    fn advanced(&mut self, config: &mut Config, catalog: &Value) -> Result<()> {
+        if !krab_core::product::enabled(catalog, "advanced") {
+            return Err("Advanced settings are fixed by this product profile".into());
+        }
         let sections = [
             Choice {
                 id: "components".into(),
@@ -226,6 +229,18 @@ impl<R: BufRead, W: Write> Prompts<R, W> {
                 label: "Continuous conformance".into(),
             },
         ];
+        let sections: Vec<_> = sections
+            .into_iter()
+            .filter(|choice| match choice.id.as_str() {
+                "components" => krab_core::product::enabled(catalog, "components"),
+                "conformance" => krab_core::product::enabled(catalog, "continuousConformance"),
+                "overrides" => {
+                    krab_core::product::enabled(catalog, "helmOverrides")
+                        && catalog["product"]["restricted"] != true
+                }
+                _ => true,
+            })
+            .collect();
         let selected = self.select(
             "Advanced settings",
             &sections,
@@ -488,6 +503,9 @@ pub fn run<R: BufRead, W: Write>(
         cursor: 0,
         previous: None,
     };
+    if let Some(name) = catalog["product"]["name"].as_str() {
+        prompts.say(&format!("{name} · Powered by KRAB"))?;
+    }
     prompts.say("KRAB configuration editor\nSelect sections by number or ID. Within a section, Enter keeps a setting, back revisits the previous question, and q cancels the section.")?;
     let mut config = match defaults.existing {
         Some(config) => config.clone(),
@@ -734,7 +752,7 @@ fn section<R: BufRead, W: Write>(
                 draft.release = p.name("Helm release name", &draft.release, 53)?;
                 draft.namespace = p.name("Kubernetes namespace", &draft.namespace, 63)?;
             }
-            "advanced" => p.advanced(&mut draft)?,
+            "advanced" => p.advanced(&mut draft, catalog)?,
             _ => return Err(format!("Unknown editor section {name}")),
         }
         Ok(draft)

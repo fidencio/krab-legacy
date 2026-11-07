@@ -17,6 +17,9 @@ use std::process::{Command, ExitCode};
 #[derive(Parser)]
 #[command(name = "krab", version, about = "Build and deploy Kata reference architectures", long_about = None)]
 struct Cli {
+    /// Apply a product profile to available choices, defaults, and advanced features.
+    #[arg(long, global = true)]
+    profile: Option<PathBuf>,
     #[command(subcommand)]
     command: Option<Action>,
 }
@@ -42,12 +45,12 @@ enum Action {
     },
     /// Create a configuration through interactive setup.
     Init {
-        #[arg(long, default_value = "custom")]
-        vendor: String,
-        #[arg(long, default_value = "kubeadm")]
-        distribution: String,
-        #[arg(long, default_value = "amd64")]
-        architecture: String,
+        #[arg(long)]
+        vendor: Option<String>,
+        #[arg(long)]
+        distribution: Option<String>,
+        #[arg(long)]
+        architecture: Option<String>,
         /// Select pinned runtime IDs directly (repeat or separate with commas).
         #[arg(long = "runtime", value_delimiter = ',')]
         runtimes: Vec<String>,
@@ -287,8 +290,7 @@ fn install(config: &Config, catalog: &Value, context: &str, execute: bool) -> Re
     }
 }
 
-fn run(action: Action) -> Result<()> {
-    let catalog = catalog();
+fn run(action: Action, catalog: Value) -> Result<()> {
     match action {
         Action::Edit {
             config: path,
@@ -342,12 +344,34 @@ fn run(action: Action) -> Result<()> {
             interactive,
             advanced,
         } => {
-            let mut starter = init(&catalog, &vendor, &distribution, &architecture)?;
-            let customized = !runtimes.is_empty() || continuous_conformance;
+            let preset = &catalog["product"]["defaults"];
+            let vendor =
+                vendor.unwrap_or_else(|| preset["vendor"].as_str().unwrap_or("custom").into());
+            let distribution = distribution
+                .unwrap_or_else(|| preset["distribution"].as_str().unwrap_or("kubeadm").into());
+            let architecture = architecture.unwrap_or_else(|| {
+                preset["architectures"][0]
+                    .as_str()
+                    .unwrap_or("amd64")
+                    .into()
+            });
+            let mut starter = if preset.is_object()
+                && preset["vendor"] == vendor
+                && preset["distribution"] == distribution
+                && preset["architectures"][0] == architecture
+            {
+                serde_json::from_value(preset.clone()).map_err(|e| e.to_string())?
+            } else {
+                init(&catalog, &vendor, &distribution, &architecture)?
+            };
+            let customized =
+                catalog["product"].is_object() || !runtimes.is_empty() || continuous_conformance;
             if !runtimes.is_empty() {
                 starter.runtimes = runtimes;
             }
-            starter.advanced.continuous_conformance = continuous_conformance;
+            if continuous_conformance {
+                starter.advanced.continuous_conformance = true;
+            }
             values::build(&starter, &catalog)?;
             let (config, path) = if non_interactive {
                 (starter.clone(), path)
@@ -429,7 +453,33 @@ fn run(action: Action) -> Result<()> {
 }
 
 fn main() -> ExitCode {
-    let action = Cli::parse().command.unwrap_or_else(|| {
+    let cli = Cli::parse();
+    let profile = cli
+        .profile
+        .or_else(|| std::env::var_os("KRAB_PROFILE").map(PathBuf::from))
+        .or_else(|| {
+            std::env::current_exe()
+                .ok()
+                .map(|p| p.with_file_name("krab-profile.json"))
+                .filter(|p| p.is_file())
+        });
+    let catalog = match profile
+        .map(|path| {
+            let source = fs::read_to_string(&path)
+                .map_err(|e| format!("Cannot read product profile {}: {e}", path.display()))?;
+            let value: Value = serde_json::from_str(&source)
+                .map_err(|e| format!("Invalid product profile {}: {e}", path.display()))?;
+            krab_core::product::apply(&catalog(), &value)
+        })
+        .transpose()
+    {
+        Ok(value) => value.unwrap_or_else(catalog),
+        Err(error) => {
+            eprintln!("krab: {error}");
+            return ExitCode::from(2);
+        }
+    };
+    let action = cli.command.unwrap_or_else(|| {
         if Path::new("krab.yaml").exists() {
             Action::Edit {
                 config: "krab.yaml".into(),
@@ -440,9 +490,9 @@ fn main() -> ExitCode {
             }
         } else {
             Action::Init {
-                vendor: "custom".into(),
-                distribution: "kubeadm".into(),
-                architecture: "amd64".into(),
+                vendor: None,
+                distribution: None,
+                architecture: None,
                 runtimes: Vec::new(),
                 continuous_conformance: false,
                 output: "krab.yaml".into(),
@@ -482,7 +532,7 @@ Remote runs require Helm and kubectl, install the pre-check chart, and emit JSON
         Action::Precheck { args } if checks::remote(&args) => checks::run_precheck(args),
         Action::Precheck { args } => krab_preflight::run(args),
         Action::Conformance { args } => krab_preflight::conformance::run(&args),
-        other => match run(other) {
+        other => match run(other, catalog) {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {
                 eprintln!("krab: {error}");

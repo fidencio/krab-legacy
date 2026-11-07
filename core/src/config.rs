@@ -143,6 +143,7 @@ impl Config {
                     .into(),
             );
         }
+        crate::product::validate(self, catalog)?;
         let vendor = find(&catalog["vendors"], &self.vendor)?;
         self.advanced.validate(vendor)?;
         if self.advanced.continuous_conformance

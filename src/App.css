@@ -4685,3 +4685,8 @@ nav a:hover,
 .cpu-cc-import > a { font-size: 12px; color: var(--muted); }
 
 .local-runtime-grid label.runtime-unavailable { opacity: 0.5; cursor: not-allowed; }
+
+[hidden] { display: none !important; }
+.product-attribution { display: flex; justify-content: center; gap: .5rem; padding: 1.25rem; font-size: .8rem; color: var(--muted); }
+.product-attribution a { color: inherit; }
+.product-error { max-width: 42rem; margin: 4rem auto; padding: 1.5rem; }

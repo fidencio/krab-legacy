@@ -493,3 +493,7 @@ sets Vite's base path from the repository name, so the resulting application is
 fully static and works from a project Pages URL.
 
 See [CI and PR artifacts](docs/ci.md) for preview deployments, downloadable charts and binaries, and dependency and Rust checks.
+
+## Self-hosted products
+
+The website and CLI can share a product profile for available runtimes, platforms, advanced features, branding, and defaults. See [self-hosting](docs/self-host.md) for the container, static-host deployment, and CoCo example. Both interfaces include Powered by KRAB attribution.

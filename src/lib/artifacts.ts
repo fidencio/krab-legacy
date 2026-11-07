@@ -213,6 +213,18 @@ export type ExplorerCatalog = {
       }
     }
   }
+  product?: {
+    id: string
+    name: string
+    description: string
+    logo: string
+    features: Record<string, boolean>
+    defaults: ReturnType<typeof buildCliConfiguration>
+    applyDefaults: boolean
+    restricted: boolean
+    attribution: string
+    attributionUrl: string
+  }
   vendors: VendorCatalog[]
 }
 
@@ -960,8 +972,9 @@ export function buildValuesBundle(
   cluster: ClusterConfiguration,
   runtime: RuntimeConfiguration,
   advanced: AdvancedConfiguration,
+  release = catalog.plannedArchitecture.charts.krab.releaseName,
 ) {
-  const config = buildCliConfiguration(vendor, selections, cluster, runtime, advanced)
+  const config = buildCliConfiguration(vendor, selections, cluster, runtime, advanced, release, catalog.plannedArchitecture.namespace)
   const source = catalog.vendors.includes(vendor) ? catalog : { ...catalog, vendors: [...catalog.vendors.filter(({ id }) => id !== vendor.id), vendor] }
   return coreRequest<string>('renderPreview', config, source)
 }
