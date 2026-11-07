@@ -40,7 +40,12 @@ jobs:
           krab_first="$RUNNER_TEMP/first/source/cli/target/release/krab"
           krab_second="$RUNNER_TEMP/second-longer-path/source/cli/target/release/krab"
           sha256sum "$krab_first" "$krab_second" | tee reproducibility.txt
-          cmp "$krab_first" "$krab_second"
+          if ! cmp "$krab_first" "$krab_second"; then
+            strings "$krab_first" > "$RUNNER_TEMP/first-strings.txt"
+            strings "$krab_second" > "$RUNNER_TEMP/second-strings.txt"
+            diff -u "$RUNNER_TEMP/first-strings.txt" "$RUNNER_TEMP/second-strings.txt" | head -100 || true
+            exit 1
+          fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
