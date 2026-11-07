@@ -104,20 +104,20 @@ mod tests {
         fs::create_dir(&directory).unwrap();
         let binary = directory.join("mkfs.erofs");
         assert!(matches!(
-            check_in_directories(&[directory.clone()]),
+            check_in_directories(std::slice::from_ref(&directory)),
             Result::Unavailable(_)
         ));
 
         fs::write(&binary, b"\0mkfs-time\0sort\0").unwrap();
         fs::set_permissions(&binary, fs::Permissions::from_mode(0o755)).unwrap();
         assert!(matches!(
-            check_in_directories(&[directory.clone()]),
+            check_in_directories(std::slice::from_ref(&directory)),
             Result::Available
         ));
 
         fs::write(&binary, b"\0mkfs-time\0qsort\0").unwrap();
         assert!(matches!(
-            check_in_directories(&[directory.clone()]),
+            check_in_directories(std::slice::from_ref(&directory)),
             Result::Unavailable(_)
         ));
 
