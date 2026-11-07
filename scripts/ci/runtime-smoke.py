@@ -39,8 +39,10 @@ def main():
     node = nodes['items'][0]['metadata']['name']
     configz = json.loads(command('kubectl', 'get', '--raw', f'/api/v1/nodes/{node}/proxy/configz').stdout)
     endpoint = configz['kubeletconfig']['containerRuntimeEndpoint']
-    assert endpoint.startswith('unix:///'), endpoint
-    command('sudo', 'ctr', '--address', endpoint.removeprefix('unix://'), '--namespace', 'k8s.io',
+    # Kubelet accepts both a unix:// URL and a bare absolute socket path.
+    socket = endpoint.removeprefix('unix://')
+    assert socket.startswith('/'), endpoint
+    command('sudo', 'ctr', '--address', socket, '--namespace', 'k8s.io',
             'images', 'import', str(Path('smoke-tools/preflight.tar').resolve()))
     results = []
 
