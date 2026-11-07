@@ -852,7 +852,7 @@ function App() {
       </aside>
     )}
     <div className="app-shell">
-      <header className="site-header">
+      <header className={`site-header${catalog.product ? ' product-header' : ''}`}>
         <button className="brand" onClick={restart} aria-label={`${catalog.product?.name ?? 'Kata Reference Architecture Builder'} home`}>
           {catalog.product?.logo && <img className="product-mark" src={catalog.product.logo} alt="" />}
           <span className="brand-copy">

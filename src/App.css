@@ -4692,3 +4692,9 @@ nav a:hover,
 .product-error { max-width: 42rem; margin: 4rem auto; padding: 1.5rem; }
 
 .product-mark { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+
+.product-header { grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; padding-block: 8px; }
+.product-header .brand { min-width: 0; width: 100%; text-align: left; }
+.product-header .brand-copy { flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.product-header .brand-copy strong { letter-spacing: .02em; overflow-wrap: anywhere; }
+.product-header .brand-copy small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
