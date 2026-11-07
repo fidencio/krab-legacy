@@ -47,6 +47,8 @@ jobs:
         run: |
           set -euo pipefail
           docker run --rm --read-only --platform linux/${{ matrix.architecture }} \
+            --volume /:/host:ro --volume /proc:/host/proc:ro \
+            --volume /sys:/host/sys:ro --volume /dev:/host/dev:ro \
             krab-preflight:test > report.json
           node --input-type=module - '${{ matrix.architecture }}' <<'NODE'
           import assert from 'node:assert/strict'
