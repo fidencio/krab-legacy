@@ -141,6 +141,14 @@ jobs:
               vm = fcntl.ioctl(kvm, 0xae01, 0)
               os.close(vm)
           PY
+      - name: Pin the previously verified RKE2 release
+        if: matrix.distribution == 'rke2'
+        # The upstream installer currently resolves the stable channel to the literal
+        # word "stable", whose download URL returns 404. Keep Kata's script intact.
+        run: |
+          echo 'INSTALL_RKE2_VERSION=v1.37.2+rke2r1' >> "$GITHUB_ENV"
+          echo 'Defaults env_keep += "INSTALL_RKE2_VERSION"' | sudo tee /etc/sudoers.d/krab-rke2-version
+          sudo visudo -cf /etc/sudoers.d/krab-rke2-version
       - name: Set up Kubernetes using Kata's scripts directly
         working-directory: kata-upstream
         run: bash tests/integration/kubernetes/gha-run.sh deploy-k8s

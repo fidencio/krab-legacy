@@ -19,10 +19,16 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - run: rustup toolchain install 1.95.0 --profile minimal
+      - name: Install the actual release target and linker
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --target x86_64-unknown-linux-musl
+          krab_sysroot="$(rustc +1.95.0 --print sysroot)"
+          krab_host="$(rustc +1.95.0 -vV | sed -n 's/^host: //p')"
+          echo "$krab_sysroot/lib/rustlib/$krab_host/bin" >> "$GITHUB_PATH"
       - name: Build twice with independent paths and Cargo homes
         env:
           CARGO_INCREMENTAL: '0'
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
           CARGO_PROFILE_RELEASE_STRIP: symbols
         run: |
           for build in first second-longer-path; do
@@ -34,11 +40,11 @@ jobs:
               cd "$krab_source"
               export CARGO_HOME="$krab_cargo"
               export RUSTFLAGS="--remap-path-prefix=$krab_source=/usr/src/krab --remap-path-prefix=$krab_cargo=/usr/src/cargo"
-              cargo +1.95.0 build --release --locked --manifest-path cli/Cargo.toml
+              cargo +1.95.0 build --release --locked --manifest-path cli/Cargo.toml --target x86_64-unknown-linux-musl
             )
           done
-          krab_first="$RUNNER_TEMP/first/source/cli/target/release/krab"
-          krab_second="$RUNNER_TEMP/second-longer-path/source/cli/target/release/krab"
+          krab_first="$RUNNER_TEMP/first/source/cli/target/x86_64-unknown-linux-musl/release/krab"
+          krab_second="$RUNNER_TEMP/second-longer-path/source/cli/target/x86_64-unknown-linux-musl/release/krab"
           sha256sum "$krab_first" "$krab_second" | tee reproducibility.txt
           if ! cmp "$krab_first" "$krab_second"; then
             strings "$krab_first" > "$RUNNER_TEMP/first-strings.txt"
