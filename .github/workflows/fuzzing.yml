@@ -30,7 +30,7 @@ jobs:
         run: |
           mkdir -p "fuzz/corpus/$TARGET"
           cp fuzz/seeds/"$TARGET"/* "fuzz/corpus/$TARGET/"
-          cargo +nightly fuzz run "$TARGET" -- -max_total_time=300 -rss_limit_mb=2048 -max_len=65536
+          cargo +nightly fuzz run --fuzz-dir fuzz "$TARGET" -- -max_total_time=300 -rss_limit_mb=2048 -max_len=65536
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: failure()
         with:
