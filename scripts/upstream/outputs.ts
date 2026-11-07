@@ -6,6 +6,7 @@ import type { buildCatalog } from './build-catalog.ts'
 type GeneratedOutputs = Awaited<ReturnType<typeof buildCatalog>>
 
 export async function writeOutputs(root: string, shouldFetch: boolean, outputs: GeneratedOutputs) {
+  await writeFile(resolve(root, 'charts/krab/templates/_kata-node-job-base.tpl'), outputs.kataNodeJobBase)
   await writeFile(resolve(root, 'charts/krab/Chart.yaml'), outputs.updatedChart)
   const chart = parse(outputs.updatedChart) as {
     dependencies?: { name: string; version: string; repository: string; condition?: string }[]

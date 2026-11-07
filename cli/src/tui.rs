@@ -57,6 +57,7 @@ const ADVANCED: &[(&str, Field)] = &[
         "Install EROFS utilities",
         Field::Runtime("installErofsUtils"),
     ),
+    ("Continuous conformance", Field::Conformance),
     ("Website advanced settings (YAML)", Field::WebsiteAdvanced),
     ("Chart overrides (YAML)", Field::Overrides),
 ];
@@ -71,6 +72,7 @@ enum Field {
     Mode(String),
     Tees(String),
     Selinux,
+    Conformance,
     Component(&'static str),
     Runtime(&'static str),
     Release,
@@ -193,7 +195,11 @@ impl<'a> App<'a> {
     fn advanced_field(field: &Field) -> bool {
         matches!(
             field,
-            Field::Component(_) | Field::Runtime(_) | Field::Overrides | Field::WebsiteAdvanced
+            Field::Component(_)
+                | Field::Runtime(_)
+                | Field::Overrides
+                | Field::WebsiteAdvanced
+                | Field::Conformance
         )
     }
     fn parent(&mut self, field: &Field) {
@@ -214,6 +220,7 @@ impl<'a> App<'a> {
             Field::Overrides => value["valuesOverrides"].clone(),
             Field::WebsiteAdvanced => value["advanced"].clone(),
             Field::Selinux => value["selinux"].clone(),
+            Field::Conformance => value["advanced"]["continuousConformance"].clone(),
             _ => Value::Null,
         }
     }
@@ -228,6 +235,13 @@ impl<'a> App<'a> {
             Field::Overrides => value["valuesOverrides"] = replacement,
             Field::WebsiteAdvanced => value["advanced"] = replacement,
             Field::Selinux => value["selinux"] = replacement,
+            Field::Conformance => {
+                if replacement == true {
+                    value["components"]["nfd"] = json!(true);
+                    value["components"]["kataDeploy"] = json!(true);
+                }
+                value["advanced"]["continuousConformance"] = replacement;
+            }
             _ => return Err("This field is not a scalar setting".into()),
         }
         self.config = serde_json::from_value(value).map_err(|e| e.to_string())?;
@@ -459,6 +473,7 @@ impl<'a> App<'a> {
                 true,
             ),
             Field::Selinux
+            | Field::Conformance
             | Field::Runtime(
                 "nvidiaDcgm" | "erofsDmverity" | "erofsFsverity" | "installErofsUtils",
             ) => {
@@ -605,7 +620,7 @@ impl<'a> App<'a> {
                 },
             )?,
             Field::Runtime("erofsMode") => self.set_value(&menu.field, json!(first))?,
-            Field::Selinux | Field::Runtime(_) => {
+            Field::Selinux | Field::Conformance | Field::Runtime(_) => {
                 self.set_value(&menu.field, json!(first == "enabled"))?
             }
             _ => {}

@@ -54,6 +54,7 @@ pub enum Requirement {
     Tdx,
     Snp,
     Se,
+    Gpu,
     GpuCc,
     GpuPpcie,
     Erofs,
@@ -67,6 +68,7 @@ impl Requirement {
             "tdx" => Ok(Self::Tdx),
             "snp" => Ok(Self::Snp),
             "se" => Ok(Self::Se),
+            "gpu" => Ok(Self::Gpu),
             "gpu-cc" => Ok(Self::GpuCc),
             "gpu-ppcie" => Ok(Self::GpuPpcie),
             "erofs" => Ok(Self::Erofs),
@@ -74,7 +76,7 @@ impl Requirement {
         }
     }
     fn gpu(self) -> bool {
-        matches!(self, Self::GpuCc | Self::GpuPpcie)
+        matches!(self, Self::Gpu | Self::GpuCc | Self::GpuPpcie)
     }
     fn name(self) -> &'static str {
         match self {
@@ -83,6 +85,7 @@ impl Requirement {
             Self::Tdx => "tdx",
             Self::Snp => "snp",
             Self::Se => "se",
+            Self::Gpu => "gpu",
             Self::GpuCc => "gpu-cc",
             Self::GpuPpcie => "gpu-ppcie",
             Self::Erofs => "erofs",
@@ -90,7 +93,9 @@ impl Requirement {
     }
 }
 
+#[derive(Clone)]
 pub struct Options {
+    deployment_policy: Option<Vec<krab_core::deployment::RuntimePolicy>>,
     pub requirements: Vec<Requirement>,
     pub any_of_requirements: Vec<Requirement>,
     pub gpu_models: Vec<String>,
@@ -115,6 +120,7 @@ pub struct Options {
 impl Options {
     pub fn parse(args: &[String]) -> Result<Self, String> {
         let mut options = Self {
+            deployment_policy: None,
             requirements: Vec::new(),
             any_of_requirements: Vec::new(),
             gpu_models: Vec::new(),
@@ -163,6 +169,7 @@ impl Options {
                     continue;
                 }
                 "--require"
+                | "--deployment-policy"
                 | "--require-any"
                 | "--gpu-model"
                 | "--report"
@@ -190,6 +197,29 @@ impl Options {
                 .ok_or_else(|| format!("{arg} requires a value"))?
                 .clone();
             match arg.as_str() {
+                "--deployment-policy" => {
+                    let profiles: Vec<krab_core::deployment::RuntimePolicy> =
+                        serde_json::from_str(&value)
+                            .map_err(|e| format!("Invalid deployment policy: {e}"))?;
+                    if profiles.is_empty() || profiles.len() > 32 {
+                        return Err("Deployment policy needs 1–32 runtime profiles".into());
+                    }
+                    for profile in &profiles {
+                        if profile.name.is_empty()
+                            || profile.name.len() > 128
+                            || profile.architectures.is_empty()
+                            || profile.architectures.iter().any(|a| {
+                                !["amd64", "arm64", "ppc64le", "s390x"].contains(&a.as_str())
+                            })
+                        {
+                            return Err("Invalid deployment runtime profile".into());
+                        }
+                        for requirement in &profile.requirements {
+                            Requirement::parse(requirement)?;
+                        }
+                    }
+                    options.deployment_policy = Some(profiles);
+                }
                 "--require" => {
                     let requirement = Requirement::parse(&value)?;
                     if !options.requirements.contains(&requirement) {
@@ -251,7 +281,10 @@ impl Options {
                 }
             }
         }
-        if options.requirements.is_empty() && options.any_of_requirements.is_empty() {
+        if options.requirements.is_empty()
+            && options.any_of_requirements.is_empty()
+            && options.deployment_policy.is_none()
+        {
             return Err(
                 "Choose --require or --require-any; conformance never assumes a CC profile".into(),
             );
@@ -362,6 +395,13 @@ pub struct Finding {
 }
 
 impl Finding {
+    fn failed(check: &str, reason: impl Into<String>) -> Self {
+        Self {
+            check: check.into(),
+            status: Status::No,
+            reason: reason.into(),
+        }
+    }
     fn unknown(check: &str, reason: impl Into<String>) -> Self {
         Self {
             check: check.into(),
@@ -391,6 +431,8 @@ pub struct Verdict {
     requirements: Vec<Requirement>,
     any_of_requirements: Vec<Requirement>,
     gpu_models: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deployment_policy: Option<Vec<krab_core::deployment::RuntimePolicy>>,
     source: &'static str,
     coverage_verified: bool,
     total_nodes: usize,
@@ -414,13 +456,31 @@ struct CheckEvidence {
 }
 
 fn check_evidence(options: &Options, report: &NodeReport) -> Vec<CheckEvidence> {
-    let selected = |requirement| options.requirements.contains(&requirement);
-    let gpu =
-        options.requirements.iter().any(|r| r.gpu()) || !options.any_of_requirements.is_empty();
+    // All profiles remain visible as alternatives; evaluation still requires a complete profile.
+    let deployment_requirements: Vec<_> = options
+        .deployment_policy
+        .iter()
+        .flatten()
+        .filter(|profile| profile.architectures.contains(&report.node.architecture))
+        .flat_map(|profile| &profile.requirements)
+        .filter_map(|requirement| Requirement::parse(requirement).ok())
+        .collect();
+    let selected = |requirement| {
+        options.requirements.contains(&requirement)
+            || deployment_requirements.contains(&requirement)
+    };
+    let gpu = options
+        .requirements
+        .iter()
+        .chain(&deployment_requirements)
+        .any(|r| r.gpu())
+        || !options.any_of_requirements.is_empty();
     let cpu_alternative =
         |architecture| selected(Requirement::Cc) && report.node.architecture == architecture;
     let role = |required, alternative| {
-        if required {
+        if required && options.deployment_policy.is_some() {
+            "runtime-profile"
+        } else if required {
             "required"
         } else if alternative {
             "alternative"
@@ -497,7 +557,9 @@ fn gpu_failures(report: &NodeReport, requirement: Requirement) -> Vec<Finding> {
     require(&mut failures, "iommufd", &report.checks.iommufd);
     require(&mut failures, "gpu-present", &report.gpus.present);
     require(&mut failures, "nvidia", &report.gpus.nvidia);
-    if requirement == Requirement::GpuCc {
+    if requirement == Requirement::Gpu {
+        require(&mut failures, "gpu", &report.gpus.nvidia);
+    } else if requirement == Requirement::GpuCc {
         require(&mut failures, "gpu-cc", &report.gpus.cc);
     } else {
         require(&mut failures, "gpu-ppcie", &report.gpus.ppcie);
@@ -524,6 +586,47 @@ fn gpu_failures(report: &NodeReport, requirement: Requirement) -> Vec<Finding> {
 }
 
 fn evaluate_node(
+    options: &Options,
+    report: &NodeReport,
+    identity: Option<&Identity>,
+) -> (Vec<Finding>, Vec<Requirement>) {
+    let Some(profiles) = &options.deployment_policy else {
+        return evaluate_node_base(options, report, identity);
+    };
+    let mut failures = Vec::new();
+    let mut matched_arch = false;
+    for profile in profiles
+        .iter()
+        .filter(|p| p.architectures.contains(&report.node.architecture))
+    {
+        matched_arch = true;
+        let mut candidate = options.clone();
+        candidate.deployment_policy = None;
+        candidate.requirements = profile
+            .requirements
+            .iter()
+            .map(|r| Requirement::parse(r).expect("validated deployment requirement"))
+            .collect();
+        candidate.gpu_models = profile.gpu_models.clone();
+        let (mut issues, matched) = evaluate_node_base(&candidate, report, identity);
+        if issues.is_empty() {
+            return (issues, matched);
+        }
+        for issue in &mut issues {
+            issue.reason = format!("{}: {}", profile.name, issue.reason);
+        }
+        failures.extend(issues);
+    }
+    if !matched_arch {
+        failures.push(Finding::failed(
+            "deployment-runtime",
+            "No selected runtime supports this node architecture",
+        ));
+    }
+    (failures, Vec::new())
+}
+
+fn evaluate_node_base(
     options: &Options,
     report: &NodeReport,
     identity: Option<&Identity>,
@@ -600,7 +703,7 @@ fn evaluate_node(
                     ));
                 }
             }
-            Requirement::GpuCc | Requirement::GpuPpcie => {
+            Requirement::Gpu | Requirement::GpuCc | Requirement::GpuPpcie => {
                 failures.extend(gpu_failures(report, *requirement));
             }
         }
@@ -761,6 +864,7 @@ pub fn evaluate(
         requirements: options.requirements.clone(),
         any_of_requirements: options.any_of_requirements.clone(),
         gpu_models: options.gpu_models.clone(),
+        deployment_policy: options.deployment_policy.clone(),
         source: if options.run {
             "live-cluster"
         } else if options.collection_error.is_some() {
@@ -805,6 +909,8 @@ struct LocalVerdict {
     requirements: Vec<Requirement>,
     any_of_requirements: Vec<Requirement>,
     gpu_models: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deployment_policy: Option<Vec<krab_core::deployment::RuntimePolicy>>,
     failures: Vec<Finding>,
     checks: Vec<CheckEvidence>,
     precheck: Option<NodeReport>,
@@ -845,6 +951,7 @@ fn local(options: &Options) -> ExitCode {
         requirements: options.requirements.clone(),
         any_of_requirements: options.any_of_requirements.clone(),
         gpu_models: options.gpu_models.clone(),
+        deployment_policy: options.deployment_policy.clone(),
         failures: Vec::new(),
         checks: Vec::new(),
         precheck: None,

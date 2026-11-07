@@ -6,6 +6,7 @@ on:
   pull_request:
     paths:
       - preflight/**
+      - core/**
       - scripts/package-preflight-binary.py
       - scripts/smoke-preflight-binary.py
       - .github/workflows/preflight-binaries.yml
@@ -15,6 +16,7 @@ on:
     branches: [main]
     paths:
       - preflight/**
+      - core/**
       - scripts/package-preflight-binary.py
       - scripts/smoke-preflight-binary.py
       - .github/workflows/preflight-binaries.yml

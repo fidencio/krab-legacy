@@ -3,9 +3,19 @@
   "releaseContract": {
     "path": "upstream/architecture.yaml",
     "status": "stable",
-    "notice": "KRAB 0.2.9. Review generated values before deploying."
+    "notice": "KRAB 0.2.10. Review generated values before deploying."
   },
   "generatedFrom": [
+    {
+      "id": "kata-deploy-helpers",
+      "repository": "kata-containers/kata-containers",
+      "ref": "03cf2ec06a5d302f23af811744f6bcea49988bfb",
+      "release": "4.3.1",
+      "draft": false,
+      "path": "tools/packaging/kata-deploy/helm-chart/kata-deploy/templates/_helpers.tpl",
+      "sha256": "8190c8084852c2cacf8a636160616ef9b99d8865419d18fc08acaa53084488a8",
+      "sourceUrl": "https://github.com/kata-containers/kata-containers/blob/03cf2ec06a5d302f23af811744f6bcea49988bfb/tools/packaging/kata-deploy/helm-chart/kata-deploy/templates/_helpers.tpl"
+    },
     {
       "id": "kata-chart",
       "repository": "kata-containers/kata-containers",

@@ -22,7 +22,7 @@ test('conformance NFD policy is opt-in and labels only explicit fresh results', 
         return document.toJS()
       }).filter(Boolean)
     assert.deepEqual(render(), [])
-    const resources = render('--set', 'nodeConformance.enabled=true')
+    const resources = render('--set', 'global.krab.continuousConformance=true')
     assert.equal(resources.length, 1)
     const rule = resources[0]
     assert.equal(rule.kind, 'NodeFeatureRule')
@@ -35,8 +35,8 @@ test('conformance NFD policy is opt-in and labels only explicit fresh results', 
       assert.equal(matching[0].labels['feature.node.kubernetes.io/krab-conformance'], state)
     }
     assert.equal(rule.spec.rules.length, 3)
-    assert.deepEqual(render('--set', 'nodeConformance.enabled=false'), [])
-    assert.throws(() => render('--set-string', 'nodeConformance.enabled=yes'), /nodeConformance[\s\S]*boolean/)
+    assert.deepEqual(render('--set', 'global.krab.continuousConformance=false'), [])
+    assert.throws(() => render('--set-string', 'global.krab.continuousConformance=yes'), /continuousConformance[\s\S]*boolean/)
   } finally {
     rmSync(chart, { recursive: true, force: true })
   }

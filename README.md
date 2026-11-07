@@ -118,7 +118,7 @@ Install the published pre-check chart to check every Linux node in the cluster:
 ```sh
 helm install krab-precheck \
   oci://ghcr.io/fidencio/krab-precheck \
-  --version 0.2.9 \
+  --version 0.2.10 \
   --timeout 35m \
   --namespace krab-precheck --create-namespace &&
 kubectl --namespace krab-precheck logs \
@@ -283,7 +283,7 @@ For the GPU OR selection instead, use `anyOf: [gpu-cc, gpu-ppcie]` under
 ```sh
 helm upgrade --install krab-conformance \
   oci://ghcr.io/fidencio/krab-precheck \
-  --version 0.2.9 \
+  --version 0.2.10 \
   --namespace krab-conformance --create-namespace \
   --timeout 35m --values conformance-values.yaml
 ```
@@ -482,7 +482,7 @@ For a prerelease, specify its version explicitly when installing with Helm:
 
 ```sh
 helm upgrade --install krab oci://ghcr.io/fidencio/krab \
-  --version 0.2.9 \
+  --version 0.2.10 \
   --namespace kata-system \
   --create-namespace \
   --values values.yaml

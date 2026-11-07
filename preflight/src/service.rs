@@ -100,7 +100,9 @@ enum Action {
 
 #[derive(Args, Clone)]
 struct Policy {
-    #[arg(long = "require", value_parser = ["kvm", "cc", "tdx", "snp", "se", "gpu-cc", "gpu-ppcie", "erofs"])]
+    #[arg(long)]
+    deployment_policy: Option<String>,
+    #[arg(long = "require", value_parser = ["kvm", "cc", "tdx", "snp", "se", "gpu", "gpu-cc", "gpu-ppcie", "erofs"])]
     requirements: Vec<String>,
     #[arg(long, value_delimiter = ',', value_parser = ["gpu-cc", "gpu-ppcie"])]
     require_any: Vec<String>,
@@ -144,6 +146,9 @@ impl Policy {
 
     fn arguments(&self) -> Vec<String> {
         let mut args = Vec::new();
+        if let Some(policy) = &self.deployment_policy {
+            args.extend(["--deployment-policy".into(), policy.clone()]);
+        }
         for requirement in &self.requirements {
             args.extend(["--require".into(), requirement.clone()]);
         }
@@ -155,6 +160,15 @@ impl Policy {
         }
         args
     }
+}
+
+/// Used by the tokenless node deployment stage; the ordinary installer still
+/// owns validation, locking, integrity pins, activation and removal.
+pub(crate) fn deployment(args: &[String]) -> Result<()> {
+    let cli = Installer::try_parse_from(
+        std::iter::once("krab-preflight conformance".to_string()).chain(args.iter().cloned()),
+    )?;
+    dispatch(cli.action)
 }
 
 fn dispatch(action: Action) -> Result<()> {
@@ -371,7 +385,7 @@ fn install_prepared(
     fs::create_dir_all(enabled.parent().context("unit enablement parent")?)?;
     remove_file(&enabled)?;
     symlink("../krab-conformance.service", enabled)?;
-    println!("installed systemd conformance daemon; NFD needs a read-only mount of /run/krab/features at the same container path");
+    println!("installed systemd conformance daemon");
     Ok(())
 }
 

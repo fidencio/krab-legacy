@@ -58,9 +58,11 @@ test('generated catalog carries accurate upstream chart data', async () => {
       'qemu-nvidia-gpu-snp-runtime-rs',
       'qemu-nvidia-gpu-tdx-runtime-rs',
       'qemu-nvidia-cpu-runtime-rs',
+      'qemu-nvidia-cpu-snp-runtime-rs',
+      'qemu-nvidia-cpu-tdx-runtime-rs',
     ],
   )
-  const vendorCpuRuntime = vendor.runtime.shims.at(-1)!
+  const vendorCpuRuntime = vendor.runtime.shims.find(shim => shim.id === 'qemu-nvidia-cpu-runtime-rs')!
   assert.equal(vendorCpuRuntime.runtimeClass, 'kata-qemu-nvidia-cpu-runtime-rs')
   assert.equal(vendorCpuRuntime.userSelectable, true)
   assert.equal(vendorCpuRuntime.selectionGroup, 'cpu')
@@ -85,6 +87,8 @@ test('generated catalog carries accurate upstream chart data', async () => {
       'qemu-nvidia-gpu-runtime-rs',
       'qemu-nvidia-gpu-snp-runtime-rs',
       'qemu-nvidia-gpu-tdx-runtime-rs',
+      'qemu-nvidia-cpu-snp-runtime-rs',
+      'qemu-nvidia-cpu-tdx-runtime-rs',
     ],
   )
   const nvidiaCpuRuntime = local.runtime.shims.find(

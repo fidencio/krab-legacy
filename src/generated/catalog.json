@@ -3,7 +3,7 @@
   "plannedArchitecture": {
     "schemaVersion": 1,
     "status": "stable",
-    "notice": "KRAB 0.2.9. Review generated values before deploying.",
+    "notice": "KRAB 0.2.10. Review generated values before deploying.",
     "namespace": "kata-system",
     "images": {
       "kubectl": {
@@ -80,8 +80,8 @@
           "nfdValuesKey": "node-feature-discovery",
           "nfdRequired": false
         },
-        "version": "0.2.9",
-        "appVersion": "0.2.9"
+        "version": "0.2.10",
+        "appVersion": "0.2.10"
       },
       "qgs": {
         "chartName": "intel-tdx-qgs",
@@ -717,6 +717,38 @@
             },
             "nodeSelector": {},
             "sourceUrl": "https://github.com/kata-containers/kata-containers/blob/03cf2ec06a5d302f23af811744f6bcea49988bfb/tools/packaging/kata-deploy/helm-chart/kata-deploy/try-kata-nvidia-cpu.values.yaml"
+          },
+          {
+            "id": "qemu-nvidia-cpu-snp-runtime-rs",
+            "runtimeClass": "kata-qemu-nvidia-cpu-snp-runtime-rs",
+            "userSelectable": true,
+            "selectionGroup": "cpu",
+            "supportedArches": [
+              "amd64"
+            ],
+            "snapshotter": "nydus",
+            "derivedBase": "qemu-nvidia-gpu-snp-runtime-rs",
+            "cpuTee": "snp",
+            "nodeSelector": {
+              "amd.feature.node.kubernetes.io/snp": "true"
+            },
+            "sourceUrl": "https://github.com/fidencio/krab/blob/chart-v0.2.10/core/src/cpu.rs"
+          },
+          {
+            "id": "qemu-nvidia-cpu-tdx-runtime-rs",
+            "runtimeClass": "kata-qemu-nvidia-cpu-tdx-runtime-rs",
+            "userSelectable": true,
+            "selectionGroup": "cpu",
+            "supportedArches": [
+              "amd64"
+            ],
+            "snapshotter": "nydus",
+            "derivedBase": "qemu-nvidia-gpu-tdx-runtime-rs",
+            "cpuTee": "tdx",
+            "nodeSelector": {
+              "intel.feature.node.kubernetes.io/tdx": "true"
+            },
+            "sourceUrl": "https://github.com/fidencio/krab/blob/chart-v0.2.10/core/src/cpu.rs"
           }
         ],
         "cpuTees": [
@@ -1575,6 +1607,38 @@
             },
             "sourceUrl": "https://github.com/kata-containers/kata-containers/blob/03cf2ec06a5d302f23af811744f6bcea49988bfb/tools/packaging/kata-deploy/helm-chart/kata-deploy/try-kata-nvidia-gpu.values.yaml",
             "selectionGroup": "gpu"
+          },
+          {
+            "id": "qemu-nvidia-cpu-snp-runtime-rs",
+            "runtimeClass": "kata-qemu-nvidia-cpu-snp-runtime-rs",
+            "userSelectable": true,
+            "selectionGroup": "cpu",
+            "supportedArches": [
+              "amd64"
+            ],
+            "snapshotter": "nydus",
+            "derivedBase": "qemu-nvidia-gpu-snp-runtime-rs",
+            "cpuTee": "snp",
+            "nodeSelector": {
+              "amd.feature.node.kubernetes.io/snp": "true"
+            },
+            "sourceUrl": "https://github.com/fidencio/krab/blob/chart-v0.2.10/core/src/cpu.rs"
+          },
+          {
+            "id": "qemu-nvidia-cpu-tdx-runtime-rs",
+            "runtimeClass": "kata-qemu-nvidia-cpu-tdx-runtime-rs",
+            "userSelectable": true,
+            "selectionGroup": "cpu",
+            "supportedArches": [
+              "amd64"
+            ],
+            "snapshotter": "nydus",
+            "derivedBase": "qemu-nvidia-gpu-tdx-runtime-rs",
+            "cpuTee": "tdx",
+            "nodeSelector": {
+              "intel.feature.node.kubernetes.io/tdx": "true"
+            },
+            "sourceUrl": "https://github.com/fidencio/krab/blob/chart-v0.2.10/core/src/cpu.rs"
           }
         ],
         "cpuTees": [

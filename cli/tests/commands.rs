@@ -532,87 +532,50 @@ fn eof_and_invalid_sources_leave_files_intact_and_noninteractive_mode_is_explici
 }
 
 #[test]
-fn cpu_cc_overlay_import_preserves_cpu_only_requirements_and_never_enables_gpu_dependencies() {
-    let fixture = Fixture::new("cpu-cc-import", &config());
-    let overlay_path = fixture.dir.join("cpu-cc.json");
-    let name = "qemu-nvidia-cpu-tdx-runtime-rs";
-    let base = "qemu-nvidia-gpu-tdx-runtime-rs";
-    let class = serde_yaml_ng::to_string(&json!({
-        "apiVersion":"node.k8s.io/v1", "kind":"RuntimeClass", "metadata":{"name":format!("kata-{name}")},
-        "handler":format!("kata-{name}"), "overhead":{"podFixed":{"tdx.intel.com/keys":"1"}},
-        "scheduling":{"nodeSelector":{"kubernetes.io/arch":"amd64","intel.feature.node.kubernetes.io/tdx":"true"}}
-    })).unwrap();
-    let mut overlay = json!({"kata-deploy":{"customRuntimes":{"enabled":true,"runtimes":{
-        name:{"baseConfig":base,"dropIn":"[hypervisor.qemu]\nkernel_params = \"confidential=1\"\n",
-            "runtimeClass":class,"inheritBaseOverhead":true,"containerd":{"snapshotter":"nydus"},"crio":{"pullType":"guest-pull"}}
-    }}}});
-    std::fs::write(&overlay_path, overlay.to_string()).unwrap();
-    let imported = run(
-        &[
-            "import-cpu-cc",
-            "--values",
-            overlay_path.to_str().unwrap(),
-            "--output",
-            "-",
-        ],
-        None,
-    );
-    success(&imported);
-    let configuration: Value = serde_yaml_ng::from_slice(&imported.stdout).unwrap();
-    assert_eq!(configuration["runtimes"], json!([]));
-    assert_eq!(
-        configuration["advanced"]["customRuntimes"][0]["crioPullType"],
-        "guest-pull"
-    );
-    let generated = run(
-        &["generate", "--config", "-", "--json"],
-        Some(std::str::from_utf8(&imported.stdout).unwrap()),
-    );
-    success(&generated);
-    let values: Value = serde_json::from_slice(&generated.stdout).unwrap();
-    assert_eq!(values["nvidia"]["enabled"], false);
-    assert_eq!(values["intel-tdx-qgs"]["enabled"], true);
-    assert_eq!(values["kata-deploy"]["shims"][base]["enabled"], false);
-    assert_eq!(
-        values["kata-deploy"]["snapshotter"]["setup"],
-        json!(["nydus"])
-    );
-    assert_eq!(
-        values["kata-deploy"]["customRuntimes"]["runtimes"][name]["runtimeClass"],
-        class
-    );
-    let merged = run(
-        &[
-            "import-cpu-cc",
-            "--values",
-            overlay_path.to_str().unwrap(),
-            "--config",
-            fixture.path.to_str().unwrap(),
-            "--output",
-            "-",
-        ],
-        None,
-    );
-    success(&merged);
-    let merged: Value = serde_yaml_ng::from_slice(&merged.stdout).unwrap();
-    assert_eq!(merged["runtimes"], config()["runtimes"]);
-    assert_eq!(
-        std::fs::read_to_string(&fixture.path).unwrap(),
-        fixture.source
-    );
-    overlay["kata-deploy"]["customRuntimes"]["runtimes"][name]["baseConfig"] =
-        json!("qemu-nvidia-gpu-runtime-rs");
-    std::fs::write(&overlay_path, overlay.to_string()).unwrap();
-    let invalid = run(
-        &[
-            "import-cpu-cc",
-            "--values",
-            overlay_path.to_str().unwrap(),
-            "--output",
-            "-",
-        ],
-        None,
-    );
-    assert_eq!(invalid.status.code(), Some(2));
-    assert!(invalid.stdout.is_empty());
+fn cpu_presets_are_direct_selections_and_conformance_is_one_flag() {
+    for tee in ["tdx", "snp"] {
+        let name = format!("qemu-nvidia-cpu-{tee}-runtime-rs");
+        let created = run(
+            &[
+                "init",
+                "--non-interactive",
+                "--runtime",
+                &name,
+                "--continuous-conformance",
+                "--output",
+                "-",
+            ],
+            None,
+        );
+        success(&created);
+        let configuration: Value = serde_yaml_ng::from_slice(&created.stdout).unwrap();
+        assert_eq!(configuration["runtimes"], json!([name]));
+        assert_eq!(configuration["advanced"]["continuousConformance"], true);
+        let generated = run(
+            &["generate", "--config", "-", "--json"],
+            Some(std::str::from_utf8(&created.stdout).unwrap()),
+        );
+        success(&generated);
+        let values: Value = serde_json::from_slice(&generated.stdout).unwrap();
+        assert_eq!(values["nvidia"]["enabled"], false);
+        assert_eq!(values["intel-tdx-qgs"]["enabled"], tee == "tdx");
+        assert_eq!(values["global"]["krab"]["continuousConformance"], true);
+        assert_eq!(values["global"]["krab"]["nvidiaCpuTees"], json!([tee]));
+        assert_eq!(values["kata-deploy"]["job"]["reconcile"]["enabled"], true);
+        let custom = &values["kata-deploy"]["customRuntimes"]["runtimes"][&name];
+        assert_eq!(
+            custom["baseConfig"],
+            format!("qemu-nvidia-gpu-{tee}-runtime-rs")
+        );
+        let class: Value =
+            serde_yaml_ng::from_str(custom["runtimeClass"].as_str().unwrap()).unwrap();
+        assert_eq!(
+            class["scheduling"]["nodeSelector"]["feature.node.kubernetes.io/krab-conformance"],
+            "pass"
+        );
+        assert_eq!(
+            class["scheduling"]["nodeSelector"]["nvidia.com/cc.ready.state"],
+            Value::Null
+        );
+    }
 }

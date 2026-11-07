@@ -182,7 +182,7 @@ jobs:
           npm run build:core
           git diff --exit-code -- \
             preflight/Cargo.toml preflight/Cargo.lock cli/Cargo.toml cli/Cargo.lock core/Cargo.toml core/Cargo.lock \
-            package-lock.json charts/krab/Chart.yaml charts/krab/values.yaml \
+            package-lock.json charts/krab/Chart.yaml charts/krab/values.yaml charts/krab/templates/_kata-node-job-base.tpl \
             charts/precheck/Chart.yaml charts/precheck/values.yaml \
             Dockerfile.precheck upstream/precheck-image.lock.json \
             upstream/architecture.yaml README.md charts/krab/README.md \

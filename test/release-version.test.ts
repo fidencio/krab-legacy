@@ -17,6 +17,7 @@ const files = [
   'cli/Cargo.toml',
   'cli/Cargo.lock',
   'charts/krab/Chart.yaml',
+  'charts/krab/values.yaml',
   'charts/precheck/Chart.yaml',
   'upstream/architecture.yaml',
   'README.md',

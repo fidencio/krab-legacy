@@ -59,6 +59,8 @@ export type VendorCatalog = {
       runtimeClass: string
       userSelectable?: boolean
       selectionGroup?: 'cpu' | 'gpu'
+      derivedBase?: string
+      cpuTee?: string
       snapshotter: string
       snapshotterConfiguration?: {
         erofsSnapshotterMode: 'memory' | 'disk'
@@ -315,6 +317,7 @@ export type AdvancedConfiguration = {
   nodeAffinity: RuntimeNodeAffinity[]
   tolerations: RuntimeToleration[]
   scheduledReconcileEnabled: boolean
+  continuousConformance: boolean
   scheduledReconcileSchedule: string
   images: Record<
     'kataDeploy' | 'nfd' | 'devicePlugin' | 'provisioner',
@@ -463,7 +466,13 @@ export function importValuesBundle(
 
   const dependencies = catalog.plannedArchitecture.charts.krab.dependencies
   const runtimeValues = asRecord(root[dependencies.runtimeValuesKey])
-  const configuredShims = asRecord(runtimeValues.shims)
+  const configuredShims = { ...asRecord(runtimeValues.shims) }
+  const nodeSetup = asRecord(asRecord(root.global).krab)
+  const cpuPresets = new Set(Array.isArray(nodeSetup.nvidiaCpuTees)
+    ? nodeSetup.nvidiaCpuTees.filter((tee) => tee === 'tdx' || tee === 'snp')
+      .map((tee) => `qemu-nvidia-cpu-${tee}-runtime-rs`)
+    : [])
+  for (const id of cpuPresets) configuredShims[id] = { enabled: true, supportedArches: ['amd64'] }
   for (const [id, configuration] of Object.entries(configuredShims)) {
     const shim = asRecord(configuration)
     const nvrc = asRecord(shim.nvrc)
@@ -605,6 +614,7 @@ export function importValuesBundle(
   }
 
   const advanced = createAdvancedConfiguration()
+  advanced.continuousConformance = nodeSetup.continuousConformance === true
   for (const [component, valuesKey] of Object.entries({
     nfd: dependencies.nfdValuesKey,
     kataDeploy: dependencies.runtimeValuesKey,
@@ -634,9 +644,15 @@ export function importValuesBundle(
     }),
   )
   const customRuntimes = asRecord(runtimeValues.customRuntimes)
+  for (const id of cpuPresets) {
+    const dropIn = asRecord(asRecord(customRuntimes.runtimes)[id]).dropIn
+    if (typeof dropIn === 'string' && !dropIn.startsWith("# NVIDIA CPU profile prepared by KRAB's node stage.")) {
+      advanced.shimDropIns[id] = dropIn
+    }
+  }
   advanced.customRuntimes = Object.entries(
     asRecord(customRuntimes.runtimes),
-  ).map(([name, configuration]) => {
+  ).filter(([name]) => !cpuPresets.has(name)).map(([name, configuration]) => {
     const runtimeConfiguration = asRecord(configuration)
     return {
       name,
@@ -1037,9 +1053,4 @@ export function uncoveredRuntimeArchitectures(
   return architectures.filter((architecture) => !vendor.runtime.shims.some(
     ({ id, supportedArches }) => bases.has(id) && supportedArches.includes(architecture),
   ))
-}
-
-/** Read the node-derived CPU CC overlay through the same importer as the CLI. */
-export function importCpuCcOverlay(source: string, catalog: ExplorerCatalog): CustomRuntimeConfiguration[] {
-  return coreRequest('importCpuCc', undefined, catalog, JSON.parse(source))
 }

@@ -1,5 +1,12 @@
 schemaVersion: 1
 sources:
+  - id: kata-deploy-helpers
+    repository: kata-containers/kata-containers
+    ref: 03cf2ec06a5d302f23af811744f6bcea49988bfb
+    release: "4.3.1"
+    path: tools/packaging/kata-deploy/helm-chart/kata-deploy/templates/_helpers.tpl
+    cache: kata-containers/_helpers.tpl
+    sha256: 8190c8084852c2cacf8a636160616ef9b99d8865419d18fc08acaa53084488a8
   - id: kata-chart
     repository: kata-containers/kata-containers
     ref: 03cf2ec06a5d302f23af811744f6bcea49988bfb

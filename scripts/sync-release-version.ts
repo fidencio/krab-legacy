@@ -37,6 +37,7 @@ export async function syncReleaseVersion(root = resolve(import.meta.dirname, '..
     ['cli/Cargo.toml', '[package]', 'krab', /^\[package\]\nname = "krab"\nversion = "[^"]*"$/gm],
     ['cli/Cargo.lock', '[[package]]', 'krab', /^\[\[package\]\]\nname = "krab"\nversion = "[^"]*"$/gm],
     ['cli/Cargo.lock', '[[package]]', 'krab-preflight', /^\[\[package\]\]\nname = "krab-preflight"\nversion = "[^"]*"$/gm],
+    ['preflight/Cargo.lock', '[[package]]', 'krab-core', /^\[\[package\]\]\nname = "krab-core"\nversion = "[^"]*"$/gm],
     ['preflight/Cargo.toml', '[package]', 'krab-preflight', /^\[package\]\nname = "krab-preflight"\nversion = "[^"]*"$/gm],
     ['preflight/Cargo.lock', '[[package]]', 'krab-preflight', /^\[\[package\]\]\nname = "krab-preflight"\nversion = "[^"]*"$/gm],
   ] as const) {
@@ -60,6 +61,8 @@ export async function syncReleaseVersion(root = resolve(import.meta.dirname, '..
     return replaceLines(next, /^  artifacthub\.io\/prerelease:.*$/gm,
       `  artifacthub.io/prerelease: "${prerelease}"`, 1, 'charts/krab/Chart.yaml')
   })
+  await updateFile(root, 'charts/krab/values.yaml', content => replaceLines(content,
+    /^    nodeImage:.*$/gm, `    nodeImage: ghcr.io/fidencio/krab-preflight:${version}`, 1, 'charts/krab/values.yaml'))
   await updateFile(root, 'charts/precheck/Chart.yaml', (content) => {
     let next = replaceLines(content, /^version:.*$/gm, `version: ${version}`, 1, 'charts/precheck/Chart.yaml')
     return replaceLines(next, /^appVersion:.*$/gm, `appVersion: ${version}`, 1, 'charts/precheck/Chart.yaml')

@@ -2,6 +2,14 @@
 
 All notable changes to KRAB are documented in this file.
 
+## [0.2.10] - 2026-11-07
+
+- Select NVIDIA CPU TDX and SNP directly in the website, TUI, and CLI. Prepare
+  measured CPU profiles automatically in the node installation pipeline.
+- Enable continuous node conformance with one deployment setting, including
+  systemd setup, NFD discovery, runtime scheduling gates, and cleanup.
+- Remove the manual CPU overlay import workflow from the normal deployment path.
+
 ## [0.2.9] - 2026-11-07
 
 ### Added

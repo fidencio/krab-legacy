@@ -10,6 +10,8 @@ mod iommufd;
 mod kvm;
 mod nfd;
 mod node_report;
+#[cfg(target_os = "linux")]
+mod node_setup;
 mod output;
 mod platform;
 mod probe;
@@ -151,6 +153,10 @@ pub fn run_standalone(args: Vec<String>) -> ExitCode {
 }
 
 fn run_with_self_install(args: Vec<String>, allow_self_install: bool) -> ExitCode {
+    #[cfg(target_os = "linux")]
+    if args.first().is_some_and(|arg| arg == "prepare-node") {
+        return node_setup::run(&args[1..]);
+    }
     if args.first().is_some_and(|arg| arg == "conformance") {
         return conformance::run_with_self_install(&args[1..], allow_self_install);
     }

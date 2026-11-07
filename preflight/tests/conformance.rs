@@ -442,3 +442,58 @@ fn erofs_is_only_required_when_selected_and_probe_scope_is_visible() {
         assert_eq!(erofs["evaluation"], "required");
     }
 }
+
+#[test]
+fn deployment_profiles_require_one_complete_runtime_and_accept_heterogeneous_cpu_hosts() {
+    let fixture = Fixture::new();
+    let policy = json!([
+        {"name":"tdx-gpu", "architectures":["amd64"], "requirements":["kvm","tdx","gpu-cc"]},
+        {"name":"snp-gpu", "architectures":["amd64"], "requirements":["kvm","snp","gpu-ppcie"]}
+    ])
+    .to_string();
+    let mut evidence = report();
+    evidence["nodes"][1]["report"]["checks"]["tdx"]["status"] = "no".into();
+    evidence["nodes"][1]["report"]["checks"]["snp"]["status"] = "yes".into();
+    fixture.write("report.json", &evidence);
+    let run = || {
+        fixture.run(&[
+            "--report",
+            "report.json",
+            "--json",
+            "--deployment-policy",
+            &policy,
+        ])
+    };
+    assert!(run().status.success());
+    // TDX + PPCIE must not combine the CPU half of one profile with the GPU half of another.
+    evidence["nodes"][0]["report"]["gpus"]["cc"]["status"] = "no".into();
+    fixture.write("report.json", &evidence);
+    let output = run();
+    assert_eq!(output.status.code(), Some(1));
+    let verdict: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(verdict["nodes"][0]["verdict"], "fail");
+    assert_eq!(verdict["nodes"][1]["verdict"], "pass");
+    let cpu_policy = json!([
+        {"name":"cpu-tdx", "architectures":["amd64"], "requirements":["tdx"]},
+        {"name":"cpu-snp", "architectures":["amd64"], "requirements":["snp"]}
+    ])
+    .to_string();
+    for node in evidence["nodes"].as_array_mut().unwrap() {
+        node["report"]["gpus"]["devices"] = json!([]);
+        node["report"]["gpus"]["present"]["status"] = "no".into();
+        node["report"]["checks"]["iommufd"]["status"] = "no".into();
+    }
+    fixture.write("report.json", &evidence);
+    let output = fixture.run(&[
+        "--report",
+        "report.json",
+        "--json",
+        "--deployment-policy",
+        &cpu_policy,
+    ]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}

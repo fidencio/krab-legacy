@@ -74,11 +74,23 @@ fn build_inner(config: &Config, catalog: &Value, validate: bool) -> Result<Value
     let mut selected = json!({"disableAll": true});
     for shim in &shims {
         let id = text(&shim["id"]);
+        if crate::cpu::tee_for_runtime(id).is_some() {
+            continue;
+        }
         let mut value = runtime["shims"][id].clone();
         if !value.is_object() {
             return Err(format!("Catalog has no configuration for runtime {id}"));
         }
         value["enabled"] = json!(true);
+        if !config.architectures.is_empty() {
+            value["supportedArches"] = json!(items(&shim["supportedArches"])
+                .iter()
+                .filter(|a| config
+                    .architectures
+                    .iter()
+                    .any(|selected| a.as_str() == Some(selected)))
+                .collect::<Vec<_>>());
+        }
         if value["agent"].is_object() {
             value["agent"]["httpsProxy"] = json!(config.runtime.https_proxy.trim());
             value["agent"]["noProxy"] = json!(config.runtime.no_proxy.trim());
@@ -112,6 +124,7 @@ fn build_inner(config: &Config, catalog: &Value, validate: bool) -> Result<Value
             .filter(|s| {
                 let id = text(&s["id"]);
                 items(&s["supportedArches"]).contains(&json!(arch))
+                    && crate::cpu::tee_for_runtime(id).is_none()
                     && (config.vendor != "custom"
                         || (!id.split('-').any(|p| ["snp", "tdx", "se"].contains(&p))
                             && !id.contains("nvidia-gpu")))
@@ -264,6 +277,7 @@ fn build_inner(config: &Config, catalog: &Value, validate: bool) -> Result<Value
     config
         .advanced
         .apply(&mut values, vendor, catalog, &config.distribution)?;
+    crate::cpu_cc::apply_presets(&mut values, config, vendor, catalog, &shims)?;
     merge(&mut values, &config.values_overrides);
     validate_schema(
         include_str!("../../charts/krab/values.schema.json"),
