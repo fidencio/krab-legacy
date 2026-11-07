@@ -132,6 +132,7 @@ export type ExplorerCatalog = {
         id: string
         displayName: string
         kataDeployValue: string
+        unsupportedSnapshotters?: Record<string, string>
         defaultConfigurationOnly: boolean
         sourceUrl: string
       }>

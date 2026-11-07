@@ -26,6 +26,8 @@ cluster:
     - id: microk8s
       displayName: MicroK8s
       kataDeployValue: microk8s
+      unsupportedSnapshotters:
+        erofs: MicroK8s bundles containerd older than 2.2; EROFS requires containerd 2.2 or newer.
       defaultConfigurationOnly: true
     - id: rke2
       displayName: RKE2

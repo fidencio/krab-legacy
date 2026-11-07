@@ -64,3 +64,16 @@ test('shared YAML rendering preserves Helm YAML 1.1 strings and literal drop-ins
   assert.equal(values['kata-deploy'].nodeSelector.clock, '12:30')
   assert.equal(values['kata-deploy'].customNote, note)
 })
+
+
+test('MicroK8s rejects EROFS by snapshotter while allowing Nydus CPU and CoCo profiles', () => {
+  const micro = { ...config, distribution: 'microk8s' }
+  assert.throws(() => coreRequest('generate', { ...micro, runtimes: ['qemu-nvidia-cpu-runtime-rs'] }), /EROFS requires containerd 2.2/)
+  for (const runtime of ['qemu-coco-dev-runtime-rs', 'qemu-nvidia-cpu-tdx-runtime-rs', 'qemu-nvidia-cpu-snp-runtime-rs']) {
+    assert.doesNotThrow(() => coreRequest('generate', { ...micro, runtimes: [runtime] }))
+  }
+  assert.throws(() => coreRequest('generate', { ...micro, advanced: { customRuntimes: [{
+    name: 'custom-erofs', baseConfig: 'qemu-nvidia-cpu-runtime-rs',
+    dropIn: '', runtimeClass: 'kata-custom-erofs', inheritBaseOverhead: true,
+  }] } }), /EROFS requires containerd 2.2/)
+})

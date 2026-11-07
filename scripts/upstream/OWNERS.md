@@ -141,3 +141,5 @@ The NFD worker wrapper renders the pinned dependency's worker and worker-only
 RBAC/configuration templates, adding a read-only `/run/krab/features` mount.
 The upstream worker is disabled in dependency values to prevent duplicate
 resources. These wrapper contracts are checked by packaged Helm render tests.
+
+Distribution `unsupportedSnapshotters` reasons come from `upstream/architecture.yaml` and must be supported by the Kubernetes runtime smoke matrix. MicroK8s currently fails Kata's EROFS host check because its bundled containerd is older than 2.2; default and Nydus smoke pods pass. Revisit the restriction when MicroK8s updates containerd.

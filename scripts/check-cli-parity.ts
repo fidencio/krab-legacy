@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parse, stringify } from 'yaml'
 import {
-  buildValuesBundle, buildCliConfiguration, createAdvancedConfiguration,
+  buildValuesBundle, buildCliConfiguration, createAdvancedConfiguration, validateCliConfiguration,
   type ExplorerCatalog, type FamilySelections,
 } from '../src/lib/artifacts.ts'
 
@@ -56,6 +56,15 @@ for (const vendor of catalog.vendors) {
           const hardware = Object.fromEntries(Object.entries(selection).map(([id, choice]) => [id, { mode: choice.modeId, cpuTees: choice.cpuTeeIds }]))
           const input = stringify(buildCliConfiguration(vendor, selection, cluster, runtime, advanced))
           const context = `${vendor.id} ${JSON.stringify(hardware)} ${selectedShimIds} ${distribution.id} ${erofsMode}`
+          const invalid = validateCliConfiguration(parse(input), catalog)
+          if (invalid && Object.values(distribution.unsupportedSnapshotters ?? {}).some(reason => invalid.includes(reason))) {
+            if (!process.env.KRAB_CLI_FIXTURES) {
+              const rejected = spawnSync(binary, ['generate', '--config', '-', '--json'], { input, encoding: 'utf8' })
+              assert.equal(rejected.status, 2, context)
+              assert.ok(rejected.stderr.includes(invalid), rejected.stderr)
+            }
+            continue
+          }
           if (process.env.KRAB_CLI_FIXTURES) {
             fixtures.push({ context, input, expected })
             cases++
@@ -111,6 +120,15 @@ for (const vendor of catalog.vendors) {
       const expected = parse(buildValuesBundle(catalog, vendor, {}, cluster, runtime, advanced))
       const input = stringify(buildCliConfiguration(vendor, {}, cluster, runtime, advanced))
       const context = `advanced ${vendor.id} ${distribution.id} ${shim.id}`
+      const invalid = validateCliConfiguration(parse(input), catalog)
+      if (invalid && Object.values(distribution.unsupportedSnapshotters ?? {}).some(reason => invalid.includes(reason))) {
+        if (!process.env.KRAB_CLI_FIXTURES) {
+          const rejected = spawnSync(binary, ['generate', '--config', '-', '--json'], { input, encoding: 'utf8' })
+          assert.equal(rejected.status, 2, context)
+          assert.ok(rejected.stderr.includes(invalid), rejected.stderr)
+        }
+        continue
+      }
       if (process.env.KRAB_CLI_FIXTURES) fixtures.push({ context, input, expected })
       else {
         const result = spawnSync(binary, ['generate', '--config', '-', '--json'], { input, encoding: 'utf8' })

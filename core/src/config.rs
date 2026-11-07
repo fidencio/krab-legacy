@@ -150,7 +150,7 @@ impl Config {
         {
             return Err("Continuous conformance requires NFD and Kata deployment".into());
         }
-        find(
+        let distribution = find(
             &catalog["plannedArchitecture"]["cluster"]["distributions"],
             &self.distribution,
         )?;
@@ -223,6 +223,11 @@ impl Config {
         }
         if self.components.kata_deploy.unwrap_or(true) {
             for shim in &shims {
+                if let Some(reason) =
+                    distribution["unsupportedSnapshotters"][text(&shim["snapshotter"])].as_str()
+                {
+                    return Err(reason.into());
+                }
                 if !self.architectures.is_empty()
                     && !self
                         .architectures
@@ -238,6 +243,11 @@ impl Config {
             let mut coverage = shims.clone();
             for custom in &self.advanced.custom_runtimes {
                 let base = find(&vendor["runtime"]["shims"], &custom.base_config)?;
+                let snapshotter = self.advanced.snapshotter(custom, vendor)?;
+                if let Some(reason) = distribution["unsupportedSnapshotters"][snapshotter].as_str()
+                {
+                    return Err(reason.into());
+                }
                 if !self.architectures.is_empty()
                     && !self
                         .architectures
