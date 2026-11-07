@@ -48,6 +48,12 @@ enum Action {
         distribution: String,
         #[arg(long, default_value = "amd64")]
         architecture: String,
+        /// Select pinned runtime IDs directly (repeat or separate with commas).
+        #[arg(long = "runtime", value_delimiter = ',')]
+        runtimes: Vec<String>,
+        /// Install and manage continuous host conformance with the deployment.
+        #[arg(long)]
+        continuous_conformance: bool,
         #[arg(long, default_value = "krab.yaml")]
         output: PathBuf,
         #[arg(long)]
@@ -61,18 +67,6 @@ enum Action {
         /// Go directly to advanced settings using the starter configuration.
         #[arg(long)]
         advanced: bool,
-    },
-    /// Import a node-derived NVIDIA CPU TDX/SNP overlay into a KRAB configuration.
-    ImportCpuCc {
-        #[arg(long)]
-        values: PathBuf,
-        /// Merge into an existing configuration; otherwise create a CPU-only starter.
-        #[arg(long)]
-        config: Option<PathBuf>,
-        #[arg(short, long, default_value = "krab.yaml")]
-        output: PathBuf,
-        #[arg(long)]
-        force: bool,
     },
     /// Discover pinned choices; JSON retains complete catalog metadata.
     List {
@@ -296,21 +290,6 @@ fn install(config: &Config, catalog: &Value, context: &str, execute: bool) -> Re
 fn run(action: Action) -> Result<()> {
     let catalog = catalog();
     match action {
-        Action::ImportCpuCc {
-            values,
-            config,
-            output: path,
-            force,
-        } => {
-            let source =
-                fs::read_to_string(&values).map_err(|e| format!("{}: {e}", values.display()))?;
-            let overlay: Value = serde_yaml_ng::from_str(&source)
-                .map_err(|e| format!("Invalid CPU CC overlay: {e}"))?;
-            let existing = config.as_deref().map(read_config).transpose()?;
-            let config = krab_core::cpu_cc::configuration(&overlay, &catalog, existing)?;
-            let source = serde_yaml_ng::to_string(&config).map_err(|e| e.to_string())?;
-            output(Some(&path), &source, force)
-        }
         Action::Edit {
             config: path,
             output: destination,
@@ -355,14 +334,23 @@ fn run(action: Action) -> Result<()> {
             vendor,
             distribution,
             architecture,
+            runtimes,
+            continuous_conformance,
             output: path,
             force,
             non_interactive,
             interactive,
             advanced,
         } => {
+            let mut starter = init(&catalog, &vendor, &distribution, &architecture)?;
+            let customized = !runtimes.is_empty() || continuous_conformance;
+            if !runtimes.is_empty() {
+                starter.runtimes = runtimes;
+            }
+            starter.advanced.continuous_conformance = continuous_conformance;
+            values::build(&starter, &catalog)?;
             let (config, path) = if non_interactive {
-                (init(&catalog, &vendor, &distribution, &architecture)?, path)
+                (starter.clone(), path)
             } else {
                 if !interactive && !io::stdin().is_terminal() {
                     return Err("Interactive setup needs a terminal; use --non-interactive for scripts or --interactive to read answers from stdin".into());
@@ -374,7 +362,7 @@ fn run(action: Action) -> Result<()> {
                         distribution: &distribution,
                         architecture: &architecture,
                         path: &path,
-                        existing: None,
+                        existing: customized.then_some(&starter),
                         original_path: None,
                         force,
                         advanced,
@@ -455,6 +443,8 @@ fn main() -> ExitCode {
                 vendor: "custom".into(),
                 distribution: "kubeadm".into(),
                 architecture: "amd64".into(),
+                runtimes: Vec::new(),
+                continuous_conformance: false,
                 output: "krab.yaml".into(),
                 force: false,
                 non_interactive: false,

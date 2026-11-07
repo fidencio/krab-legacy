@@ -72,7 +72,7 @@ function renderCase(caseName: string, archive: string, values?: string) {
   assert.ok(hasSource('node-feature-discovery'), `${caseName}: NFD did not render`)
   const configuration = values ? parseAllDocuments(values)[0].toJS() : null
   const qgsEnabled = Boolean(configuration?.['intel-tdx-qgs']?.enabled)
-  const tdxSelected = Object.entries(configuration?.['kata-deploy']?.shims ?? {})
+  const tdxSelected = configuration?.global?.krab?.nvidiaCpuTees?.includes('tdx') || Object.entries(configuration?.['kata-deploy']?.shims ?? {})
     .some(([id, shim]) => id.includes('-tdx-') && (shim as { enabled?: boolean }).enabled)
   assert.equal(qgsEnabled, tdxSelected, `${caseName}: TDX enables QGS`)
   if (qgsEnabled) {
@@ -101,7 +101,7 @@ function generatedValues(vendor: VendorCatalog, selections: FamilySelections = {
     catalog,
     vendor,
     selections,
-    { distributionId: 'kubeadm', selinuxEnabled: false, architectures: ['amd64'] },
+    { distributionId: 'kubeadm', selinuxEnabled: false, architectures: shimIds.length ? [...new Set(vendor.runtime.shims.filter(shim => shimIds.includes(shim.id)).flatMap(shim => shim.supportedArches))] : ['amd64'] },
     { selectedShimIds: shimIds, runtimeHttpsProxy: '', runtimeNoProxy: '', nvidiaDcgmEnabled: false },
     createAdvancedConfiguration(),
   )

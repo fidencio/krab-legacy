@@ -36,3 +36,6 @@ dist-ssr
 /src/generated/core-build.json
 
 /src/generated/engine/
+/charts/krab/charts/
+/charts/krab/Chart.lock
+__pycache__/

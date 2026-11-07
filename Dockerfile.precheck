@@ -16,30 +16,35 @@ RUN rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu \
 ENV CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
     CARGO_TARGET_POWERPC64LE_UNKNOWN_LINUX_GNU_LINKER=powerpc64le-linux-gnu-gcc \
-    CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc
+    CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
+    RUSTFLAGS="-C target-feature=+crt-static"
 
 FROM cross-toolchain AS preflight-builder
 ARG TARGETARCH
-WORKDIR /build
+WORKDIR /build/preflight
 RUN case "$TARGETARCH" in \
       amd64) echo x86_64-unknown-linux-gnu ;; \
       arm64) echo aarch64-unknown-linux-gnu ;; \
       ppc64le) echo powerpc64le-unknown-linux-gnu ;; \
       s390x) echo s390x-unknown-linux-gnu ;; \
       *) exit 1 ;; \
-    esac > /build/rust-target
+    esac > rust-target
 COPY preflight/Cargo.toml preflight/Cargo.lock ./
+COPY core/Cargo.toml /build/core/Cargo.toml
+COPY core/src /build/core/src
 # Cache dependency compilation separately from the frequently changing sources.
 RUN mkdir src && echo 'fn main() {}' > src/main.rs && \
     cargo build --release --locked --target "$(cat rust-target)" && rm -r src
 COPY preflight/src ./src
 RUN find src -type f -exec touch {} + && \
     cargo build --release --locked --target "$(cat rust-target)" && \
-    cp "target/$(cat rust-target)/release/krab-preflight" /build/krab-preflight
+    cp "target/$(cat rust-target)/release/krab-preflight" /build/krab-preflight && \
+    test -z "$(readelf -l /build/krab-preflight | sed -n '/INTERP/p')"
 COPY --from=provisioner-amd64 /kata-device-provisioner /build/provisioner-amd64
 COPY --from=provisioner-arm64 /kata-device-provisioner /build/provisioner-arm64
 RUN mkdir -p /build/runtime/usr/local/bin /build/runtime/opt/krab && \
     cp /build/krab-preflight /build/runtime/usr/local/bin/ && \
+    sha256sum /build/krab-preflight > /build/runtime/opt/krab/krab-preflight.sha256 && \
     case "$TARGETARCH" in \
       amd64|arm64) cp "/build/provisioner-$TARGETARCH" "/build/runtime/opt/krab/kata-device-provisioner-$TARGETARCH" ;; \
       ppc64le|s390x) ;; \

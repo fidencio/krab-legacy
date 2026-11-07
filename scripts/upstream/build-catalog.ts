@@ -52,6 +52,14 @@ export async function buildCatalog({ root, shouldFetch, sources, policies, input
   release: Awaited<ReturnType<typeof syncReleaseVersion>>
 }) {
   const { lock, source, sourceById, cachePath, sourceLink } = sources
+  // Extend the exact pinned per-node pipeline without copying its behavior into
+  // a separately maintained dispatcher or installer.
+  const kataHelpers = await readFile(cachePath('kata-deploy-helpers'), 'utf8')
+  const nodeJobStart = kataHelpers.indexOf('{{- define "kata-deploy.perNodeJob" -}}')
+  const nodeJobEnd = kataHelpers.indexOf('\n{{/*', nodeJobStart)
+  if (nodeJobStart < 0 || nodeJobEnd < 0) throw new Error('Pinned Kata per-node Job template is missing')
+  const kataNodeJobBase = `{{/* Generated from ${sourceLink('kata-deploy-helpers')}; do not edit. */}}\n` +
+    kataHelpers.slice(nodeJobStart, nodeJobEnd).replace('define "kata-deploy.perNodeJob"', 'define "krab.kata.perNodeJobBase"')
   const { compatibility, presentation, presentationFor } = policies
   const {
     qgsChart, kataChart, kataVersions, nfdChart, nfdValues, plannedArchitecture,
@@ -452,7 +460,19 @@ export async function buildCatalog({ root, shouldFetch, sources, policies, input
     throw new Error(`Kata values are missing ${nvidiaCpuShimId}`)
   }
 
-  const runtimeRsShims = [...nvidiaGpuRuntimeRsShims, ...nvidiaCpuShims]
+  const nvidiaCpuConfidentialShims = cpuTees.map((tee) => ({
+    id: `qemu-nvidia-cpu-${tee.id}-runtime-rs`,
+    runtimeClass: `kata-qemu-nvidia-cpu-${tee.id}-runtime-rs`,
+    userSelectable: true,
+    selectionGroup: 'cpu' as const,
+    supportedArches: ['amd64'],
+    snapshotter: 'nydus',
+    derivedBase: tee.shimId,
+    cpuTee: tee.id,
+    nodeSelector: compatibility.teeSelectors[`qemu-${tee.id}-runtime-rs`],
+    sourceUrl: `https://github.com/fidencio/krab/blob/chart-v${release.version}/core/src/cpu.rs`,
+  }))
+  const runtimeRsShims = [...nvidiaGpuRuntimeRsShims, ...nvidiaCpuShims, ...nvidiaCpuConfidentialShims]
 
   const localShims = Object.entries(
     requireValue(kataValues.shims, 'Kata values are missing shims'),
@@ -623,6 +643,7 @@ export async function buildCatalog({ root, shouldFetch, sources, policies, input
     ...localShims,
     ...customTeeShims,
     ...nvidiaGpuRuntimeRsShims,
+    ...nvidiaCpuConfidentialShims,
   ]
   const customRuntimeValues = {
     ...localRuntimeValues,
@@ -932,6 +953,7 @@ export async function buildCatalog({ root, shouldFetch, sources, policies, input
   }
 
   return {
+    kataNodeJobBase,
     updatedChart, updatedValues, updatedPrecheck, precheckImageLock, catalog, provenance,
     familyCount: families.length,
     runtimeClassCount: runtimeRsShims.length,

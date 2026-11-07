@@ -145,6 +145,11 @@ impl Config {
         }
         let vendor = find(&catalog["vendors"], &self.vendor)?;
         self.advanced.validate(vendor)?;
+        if self.advanced.continuous_conformance
+            && (self.components.nfd == Some(false) || self.components.kata_deploy == Some(false))
+        {
+            return Err("Continuous conformance requires NFD and Kata deployment".into());
+        }
         find(
             &catalog["plannedArchitecture"]["cluster"]["distributions"],
             &self.distribution,

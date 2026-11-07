@@ -20,6 +20,7 @@ pub struct Advanced {
     pub node_affinity: Vec<Affinity>,
     pub tolerations: Vec<Toleration>,
     pub scheduled_reconcile_enabled: bool,
+    pub continuous_conformance: bool,
     pub scheduled_reconcile_schedule: String,
     pub images: Images,
     pub debug: bool,
@@ -39,6 +40,7 @@ impl Default for Advanced {
             node_affinity: Vec::new(),
             tolerations: Vec::new(),
             scheduled_reconcile_enabled: false,
+            continuous_conformance: false,
             scheduled_reconcile_schedule: "*/15 * * * *".into(),
             images: Images::default(),
             debug: false,
@@ -110,6 +112,9 @@ impl Advanced {
         let mut names = std::collections::BTreeSet::new();
         for custom in &self.custom_runtimes {
             let name = custom.name.trim();
+            if crate::cpu::tee_for_runtime(name).is_some() {
+                return Err("Select NVIDIA CPU TDX/SNP as a runtime instead of defining its managed handler manually".into());
+            }
             if name.is_empty()
                 || name.len() > 63
                 || !name
@@ -121,7 +126,10 @@ impl Advanced {
             {
                 return Err(format!("Invalid or duplicate custom runtime name: {name}"));
             }
-            find(&vendor["runtime"]["shims"], &custom.base_config)?;
+            let base = find(&vendor["runtime"]["shims"], &custom.base_config)?;
+            if !base["derivedBase"].is_null() {
+                return Err("Custom runtimes need an upstream base configuration".into());
+            }
         }
         if !["", "Online", "Offline", "External"].contains(&self.qgs.mode.as_str()) {
             return Err("QGS mode must be Online, Offline, or External".into());

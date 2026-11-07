@@ -148,7 +148,7 @@ and EROFS switches retain their dedicated controls above. Supported keys are:
   `crioPullType` and `inheritBaseOverhead` for each runtime.
 - `nodeSelector` (key/value rows), `nodeAffinity` (key/operator/values rows),
   and `tolerations` (key/operator/value/effect rows).
-- `scheduledReconcileEnabled`, `scheduledReconcileSchedule`, and `debug`.
+- `continuousConformance`, `scheduledReconcileEnabled`, `scheduledReconcileSchedule`, and `debug`.
 - `erofsUtilsImage` for a custom utility image.
 - `images`: `kataDeploy`, `nfd`, `devicePlugin`, `provisioner`; each accepts
   `reference`, `tag`, `pullPolicy`, `pullSecrets`, `dispatcherReference`, and
@@ -201,26 +201,31 @@ archives alongside the chart and website in the same versioned GitHub release.
 
 ## NVIDIA CPU TDX / SNP
 
-The experimental CPU confidential runtime work is included in this release.
-Use the bundled `nvidia-cpu-cc.py` helper with Python 3.11+ and the installed,
-matching Kata reference configurations, then import its overlay:
+Select **NVIDIA CPU TDX** or **NVIDIA CPU SNP** in the website’s runtime choices,
+or in the terminal editor. These CPU-only profiles do not require a GPU.
 
 ```sh
-python3 nvidia-cpu-cc.py --tee tdx > nvidia-cpu-tdx.values.json
-krab import-cpu-cc --values nvidia-cpu-tdx.values.json --output cpu-cc.yaml
-krab edit --config cpu-cc.yaml
-krab generate --config cpu-cc.yaml --output values.yaml
+krab init --non-interactive --runtime qemu-nvidia-cpu-tdx-runtime-rs --output krab.yaml
+krab generate --config krab.yaml --output values.yaml
+krab install --config krab.yaml --context my-cluster
 ```
 
-Use `--tee snp` or `--tee both` for the other variants. Importing with `--config`
-merges profiles into an existing configuration; choose a separate output file.
-The website's **Import NVIDIA CPU TDX / SNP** uses the same Rust importer.
-The helper preserves confidential boot settings and CoCo integrity metadata
-while removing the GPU guest extension. These remain custom handlers based on
-the installed NVIDIA GPU reference configurations, with CPU-only scheduling.
-See [the on-site guide](https://fidencio.github.io/krab/#docs/cpu-cc) or
-[CPU confidential workloads](../docs/nvidia-cpu-confidential.md) for the exact
-workflow and hardware validation requirements.
+Use `qemu-nvidia-cpu-snp-runtime-rs` for SNP; repeat `--runtime` to select both.
+Review the printed plan, then add `--execute` to deploy. TDX selects QGS
+automatically. CPU-only selections do not enable GPU provisioning.
+
+KRAB prepares profiles automatically on each node after Kata installs its
+artifacts, before CRI registration. The shared Rust implementation derives the
+CPU profile from the installed, matching NVIDIA confidential GPU reference:
+it keeps the confidential kernel, firmware, CoCo extension and integrity
+metadata, CPU TEE selectors and extended resource, inherited overhead, Nydus,
+and CRI-O guest-pull settings. It removes the GPU guest extension and DCGM boot
+argument. No Python helper, profile upload, or existing deployment is required.
+
+These are experimental KRAB profiles using Kata’s custom runtime support,
+not new upstream shim names. Kata may stage the GPU extension artifact, but the
+CPU profile does not attach it to its guest. Validate guest boot and attestation
+on compatible TDX/SNP hosts before running workloads.
 
 ## Discover choices
 

@@ -3,10 +3,14 @@
 nvidia:
   enabled: false
 
-# Opt-in host daemon conformance integration. Host installation is performed by
-# KRAB's checker CLI; this switch installs only the corresponding NFD policy.
-nodeConformance:
-  enabled: false
+# Shared with the per-node Kata installation pipeline. The builder manages the
+# internal image, CPU profile and policy fields; conformance is one switch.
+global:
+  krab:
+    continuousConformance: false
+    nodeImage: ghcr.io/fidencio/krab-preflight:0.2.10
+    nvidiaCpuTees: []
+    conformancePolicy: []
 
 # KRAB owns the shared NFD release.
 node-feature-discovery:
@@ -15,6 +19,8 @@ node-feature-discovery:
     repository: registry.k8s.io/nfd/node-feature-discovery
     tag: v0.20.0
   worker:
+    # KRAB renders the pinned worker template with its conformance result mount.
+    enable: false
     config:
       core:
         # Match the default host conformance interval and upstream NFD default.

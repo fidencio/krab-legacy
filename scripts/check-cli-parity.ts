@@ -2,10 +2,9 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { generate, prepare } from '../test/fixtures/nvidia-cpu-cc.ts'
 import { parse, stringify } from 'yaml'
 import {
-  buildValuesBundle, buildCliConfiguration, createAdvancedConfiguration, importCpuCcOverlay,
+  buildValuesBundle, buildCliConfiguration, createAdvancedConfiguration,
   type ExplorerCatalog, type FamilySelections,
 } from '../src/lib/artifacts.ts'
 
@@ -74,7 +73,7 @@ for (const vendor of catalog.vendors) {
 // Exercise the complete website advanced form, not just defaults.
 for (const vendor of catalog.vendors) {
   for (const distribution of catalog.plannedArchitecture.cluster.distributions) {
-    for (const shim of vendor.runtime.shims) {
+    for (const shim of vendor.runtime.shims.filter(shim => !shim.derivedBase)) {
       const advanced = createAdvancedConfiguration()
       advanced.debug = true
       advanced.qgs = { mode: 'Offline', pcsApiKeySecretName: ' pcs-key ', deploySgxPlugin: false }
@@ -122,23 +121,18 @@ for (const vendor of catalog.vendors) {
     }
   }
 }
-// Exercise the node-derived NVIDIA CPU overlays, including CoCo integrity and
-// CPU-only scheduling, against both native and browser builds of the engine.
-let cleanup = () => {}
-const directory = prepare({ after: callback => { cleanup = callback } })
-try {
-  const vendor = catalog.vendors.find(({ id }) => id === 'custom')!
-  for (const tee of ['tdx', 'snp', 'both']) {
-    const generated = generate(directory, tee)
-    assert.equal(generated.status, 0, generated.stderr)
-    const advanced = createAdvancedConfiguration()
-    advanced.customRuntimes = importCpuCcOverlay(generated.stdout, catalog)
-    const runtime = { selectedShimIds: [], runtimeHttpsProxy: '', runtimeNoProxy: '', nvidiaDcgmEnabled: false }
-    for (const distribution of catalog.plannedArchitecture.cluster.distributions) {
+// CPU presets and continuous conformance use the same full engine in both clients.
+const cpuVendor = catalog.vendors.find(({ id }) => id === 'custom')!
+for (const selectedShimIds of [['qemu-nvidia-cpu-tdx-runtime-rs'], ['qemu-nvidia-cpu-snp-runtime-rs'], ['qemu-nvidia-cpu-tdx-runtime-rs', 'qemu-nvidia-cpu-snp-runtime-rs']]) {
+  for (const distribution of catalog.plannedArchitecture.cluster.distributions) {
+    for (const continuous of [false, true]) {
+      const advanced = createAdvancedConfiguration()
+      advanced.continuousConformance = continuous
       const cluster = { distributionId: distribution.id, selinuxEnabled: false, architectures: ['amd64'] }
-      const input = stringify(buildCliConfiguration(vendor, {}, cluster, runtime, advanced))
-      const expected = parse(buildValuesBundle(catalog, vendor, {}, cluster, runtime, advanced))
-      const context = `NVIDIA CPU CC ${tee} ${distribution.id}`
+      const runtime = { selectedShimIds, runtimeHttpsProxy: '', runtimeNoProxy: '', nvidiaDcgmEnabled: false }
+      const input = stringify(buildCliConfiguration(cpuVendor, {}, cluster, runtime, advanced))
+      const expected = parse(buildValuesBundle(catalog, cpuVendor, {}, cluster, runtime, advanced))
+      const context = `NVIDIA CPU ${selectedShimIds} ${distribution.id} continuous=${continuous}`
       if (process.env.KRAB_CLI_FIXTURES) fixtures.push({ context, input, expected })
       else {
         const result = spawnSync(binary, ['generate', '--config', '-', '--json'], { input, encoding: 'utf8' })
@@ -148,7 +142,7 @@ try {
       cases++
     }
   }
-} finally { cleanup() }
+}
 if (process.env.KRAB_CLI_FIXTURES) {
   writeFileSync(process.env.KRAB_CLI_FIXTURES, JSON.stringify(fixtures))
   console.log(`Wrote ${cases} CLI/web comparison fixtures.`)

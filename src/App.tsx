@@ -34,7 +34,6 @@ import {
   customRuntimeClassName,
   customRuntimeSnapshotter,
   importValuesBundle,
-  importCpuCcOverlay,
   normalizeDeploymentName,
   resolveRuntimeShimIds,
   resolveComponents,
@@ -249,6 +248,9 @@ const runtimeUse = (id: string) => {
 
   if (traits.has('coco') && traits.has('dev')) {
     return 'Development-only CoCo testing without a hardware TEE.'
+  }
+  if (traits.has('nvidia') && traits.has('cpu') && (traits.has('tdx') || traits.has('snp'))) {
+    return 'CPU-only confidential workloads using the NVIDIA guest stack. No GPU required.'
   }
   if (traits.has('snp')) return 'Confidential workloads protected by AMD SEV-SNP.'
   if (traits.has('tdx')) return 'Confidential workloads protected by Intel TDX.'
@@ -589,23 +591,6 @@ function App() {
         type: 'error',
         text: error instanceof Error ? error.message : 'Unable to load values.yaml.',
       })
-    }
-  }
-
-  const loadCpuCcOverlay = async (file: File | undefined) => {
-    if (!file) return
-    try {
-      if (file.size > 1_000_000) throw new Error('CPU CC overlay exceeds the 1 MB limit.')
-      const profiles = importCpuCcOverlay(await file.text(), catalog)
-      setAdvanced(current => ({ ...current, customRuntimes: [
-        ...current.customRuntimes.filter(old => !profiles.some(profile => profile.name === old.name)), ...profiles,
-      ] }))
-      if (selectedVendor.id === 'custom' && customArchitectures.length === 0) {
-        setCluster(current => ({ ...current, architectures: ['amd64'] }))
-      }
-      setImportMessage({ type: 'success', text: `${file.name}: imported ${profiles.length} NVIDIA CPU confidential ${profiles.length === 1 ? 'runtime' : 'runtimes'}. Review the custom runtimes before deploying.` })
-    } catch (error) {
-      setImportMessage({ type: 'error', text: error instanceof Error ? error.message : 'Could not import CPU CC overlay.' })
     }
   }
 
@@ -1439,7 +1424,7 @@ function App() {
                                       )
                                     }
                                   >
-                                    {selectedVendor.runtime.shims.map((shim) => (
+                                    {selectedVendor.runtime.shims.filter((shim) => !shim.derivedBase).map((shim) => (
                                       <option key={shim.id} value={shim.id}>
                                         {runtimeName(shim.id)}
                                       </option>
@@ -2011,6 +1996,25 @@ function App() {
                     )}
                   </section>
 
+                  <section className="advanced-group continuous-conformance">
+                    <header>
+                      <span>Deployment health</span>
+                      <strong>Continuous conformance</strong>
+                      <small>Automatically install and supervise the host checker, publish NFD results,
+                        and gate new workloads on nodes that satisfy a selected runtime.</small>
+                    </header>
+                    <label className="selinux-toggle">
+                      <span className="toggle-copy"><strong>Enable continuous conformance</strong>
+                        <small>Host service setup, new-node enrollment, and cleanup are managed by this deployment.</small></span>
+                      <input type="checkbox" checked={advanced.continuousConformance}
+                        onChange={event => setAdvanced(current => ({ ...current,
+                          continuousConformance: event.target.checked,
+                          components: event.target.checked ? { ...current.components, nfd: true, kataDeploy: true } : current.components,
+                        }))} />
+                      <span className="toggle-track" aria-hidden="true"><span /></span>
+                    </label>
+                  </section>
+                  {!advanced.continuousConformance && (
                   <section className="advanced-group scheduled-reconcile">
                     <header>
                       <span>Kata runtime installer · New nodes</span>
@@ -2025,14 +2029,15 @@ function App() {
                         <span className="toggle-copy">
                           <strong>Reconcile nodes periodically</strong>
                           <small>
-                            {advanced.scheduledReconcileEnabled
+                            {(advanced.scheduledReconcileEnabled || advanced.continuousConformance)
                               ? 'Enabled'
                               : 'Disabled by default'}
                           </small>
                         </span>
                         <input
                           type="checkbox"
-                          checked={advanced.scheduledReconcileEnabled}
+                          checked={advanced.scheduledReconcileEnabled || advanced.continuousConformance}
+                          disabled={advanced.continuousConformance}
                           onChange={(event) =>
                             setAdvanced((current) => ({
                               ...current,
@@ -2044,7 +2049,7 @@ function App() {
                           <span />
                         </span>
                       </label>
-                      {advanced.scheduledReconcileEnabled && (
+                      {(advanced.scheduledReconcileEnabled || advanced.continuousConformance) && (
                         <label className="scheduled-reconcile-schedule">
                           <span>Cron schedule</span>
                           <input
@@ -2080,6 +2085,7 @@ function App() {
                     </p>
                   </section>
 
+                  )}
                   <section className="advanced-group">
                     <header>
                       <span>All deployed components</span>
@@ -2363,16 +2369,6 @@ function App() {
                       </div>
                     </section>
                   )}
-                  {['custom', 'nvidia'].includes(selectedVendor.id) && <div className="cpu-cc-import">
-                    <label className="import-values-button">
-                      <Upload size={14} /> Import NVIDIA CPU TDX / SNP
-                      <input type="file" accept=".json,application/json" onChange={event => {
-                        void loadCpuCcOverlay(event.target.files?.[0])
-                        event.target.value = ''
-                      }} />
-                    </label>
-                    <a href="#docs/cpu-cc">Prepare a CPU confidential profile <ExternalLink size={12} /></a>
-                  </div>}
                   {selectedVendor.hardwareFamilies.map((family) => (
                     <details
                       className={`profile-card ${
@@ -2664,6 +2660,7 @@ function App() {
                                 <span>{components[id] ? 'Deploy' : 'Skip'}</span>
                                 <input type="checkbox" role="switch"
                                   aria-label={`Deploy ${chart.chartName}`}
+                                  disabled={advanced.continuousConformance && (id === 'nfd' || id === 'kataDeploy')}
                                   checked={components[id]}
                                   onChange={(event) => {
                                     const enabled = event.target.checked

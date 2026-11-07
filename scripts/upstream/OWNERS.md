@@ -128,3 +128,16 @@ SGX plugin dependency are supplied by the published Intel chart.
 `plannedArchitecture.charts.qgs` metadata comes from `qgs-chart`. The QGS
 component default follows selected TDX runtimes; an explicit Deploy/Skip
 choice overrides that default and survives values import.
+
+KRAB's NVIDIA CPU TDX/SNP choices are derived profiles, identified by `cpuTee`
+and `derivedBase`; `core/src/cpu.rs` owns their transformation of the pinned,
+installed GPU TEE configuration. They are not declared upstream shim names.
+The catalog exposes them as selectable CPU choices in both clients.
+
+`charts/krab/templates/_kata-node-job-base.tpl` is generated verbatim from the
+`kata-deploy-helpers` source lock, with only its template name changed. The
+wrapper inserts KRAB's node setup before CRI registration and before cleanup.
+The NFD worker wrapper renders the pinned dependency's worker and worker-only
+RBAC/configuration templates, adding a read-only `/run/krab/features` mount.
+The upstream worker is disabled in dependency values to prevent duplicate
+resources. These wrapper contracts are checked by packaged Helm render tests.

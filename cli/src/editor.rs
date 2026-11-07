@@ -221,6 +221,10 @@ impl<R: BufRead, W: Write> Prompts<R, W> {
                 id: "overrides".into(),
                 label: "Advanced Helm values overrides (YAML)".into(),
             },
+            Choice {
+                id: "conformance".into(),
+                label: "Continuous conformance".into(),
+            },
         ];
         let selected = self.select(
             "Advanced settings",
@@ -301,6 +305,16 @@ impl<R: BufRead, W: Write> Prompts<R, W> {
                 self.yes_no("Enable EROFS fs-verity?", runtime.erofs_fsverity)?;
             runtime.install_erofs_utils =
                 self.yes_no("Install EROFS utilities?", runtime.install_erofs_utils)?;
+        }
+        if selected.iter().any(|s| s == "conformance") {
+            config.advanced.continuous_conformance = self.yes_no(
+                "Enable continuous conformance?",
+                config.advanced.continuous_conformance,
+            )?;
+            if config.advanced.continuous_conformance {
+                config.components.nfd = Some(true);
+                config.components.kata_deploy = Some(true);
+            }
         }
         if selected.iter().any(|s| s == "website") {
             let mut advanced = serde_json::to_value(&config.advanced).map_err(|e| e.to_string())?;
