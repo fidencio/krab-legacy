@@ -60,6 +60,10 @@ fn build_inner(config: &Config, catalog: &Value, validate: bool) -> Result<Value
     });
     let mut runtime = vendor["runtime"]["chart"]["values"].clone();
     runtime["deploymentMode"] = json!("job");
+    // A sibling NFD chart is absent from Kata's first-install auto detection.
+    // Existing externally managed NFD retains Kata's normal API detection.
+    runtime["nodeFeatureRules"] = json!({"create": if config.components.nfd.unwrap_or(true) { json!(true) } else { json!("auto") }});
+
     runtime["debug"] = json!(false);
     runtime["k8sDistribution"] = find(
         &architecture["cluster"]["distributions"],

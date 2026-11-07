@@ -17,6 +17,7 @@ for (const continuous of [false, true]) test(`CPU presets generate and round-tri
   const source = buildValuesBundle(catalog, vendor, {}, cluster, runtime, advanced)
   const values = parse(source)
   assert.equal(values.nvidia.enabled, false)
+  assert.equal(values['kata-deploy'].nodeFeatureRules.create, true)
   assert.equal(values['intel-tdx-qgs'].enabled, true)
   assert.equal(values['kata-device-plugin'].enabled, false)
   assert.equal(values['kata-device-provisioner'].enabled, false)

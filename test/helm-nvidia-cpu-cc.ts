@@ -27,6 +27,16 @@ for (const continuous of [false, true]) test(`CPU choices render an automatic no
     assert.equal(runtime.scheduling.nodeSelector['nvidia.com/cc.ready.state'], undefined)
     assert.equal(runtime.scheduling.nodeSelector['feature.node.kubernetes.io/krab-conformance'], continuous ? 'pass' : undefined)
   }
+  const teeRules = manifests.filter(doc => doc.kind === 'NodeFeatureRule' && doc.metadata.name === 'kata-tee-keys')
+  assert.equal(teeRules.length, 1, 'fresh installs must emit CPU discovery rules before NFD exists')
+  for (const [name, label, resource] of [
+    ['intel.tdx', 'intel.feature.node.kubernetes.io/tdx', 'tdx.intel.com/keys'],
+    ['amd.sev-snp', 'amd.feature.node.kubernetes.io/snp', 'sev-snp.amd.com/esids'],
+  ]) {
+    const rule = teeRules[0].spec.rules.find((rule: { name: string }) => rule.name === name)
+    assert.equal(rule.labels[label], 'true')
+    assert.ok(rule.extendedResources[resource])
+  }
   const configs = manifests.find(doc => doc.kind === 'ConfigMap' && doc.data?.['custom-runtimes.list'])
   assert.ok(configs)
   for (const tee of ['snp', 'tdx']) assert.ok(configs.data['custom-runtimes.list'].includes(`kata-qemu-nvidia-cpu-${tee}-runtime-rs:qemu-nvidia-gpu-${tee}-runtime-rs:nydus:guest-pull:amd64`))
