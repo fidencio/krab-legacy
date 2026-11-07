@@ -4683,3 +4683,5 @@ nav a:hover,
 
 .cpu-cc-import { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 0; }
 .cpu-cc-import > a { font-size: 12px; color: var(--muted); }
+
+.local-runtime-grid label.runtime-unavailable { opacity: 0.5; cursor: not-allowed; }

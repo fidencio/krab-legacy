@@ -262,10 +262,7 @@ impl<'a> App<'a> {
             self.parent(&field);
             return;
         }
-        let checked: Vec<_> = options
-            .iter()
-            .map(|o| current.contains(&o.id) || o.locked)
-            .collect();
+        let checked: Vec<_> = options.iter().map(|o| current.contains(&o.id)).collect();
         let cursor = if multiple {
             0
         } else {
@@ -353,19 +350,29 @@ impl<'a> App<'a> {
                     .iter()
                     .map(|s| text(&s["id"]).to_string())
                     .collect();
+                let distribution = find(
+                    &self.catalog["plannedArchitecture"]["cluster"]["distributions"],
+                    &self.config.distribution,
+                )?;
                 let options = items(&vendor["runtime"]["shims"])
                     .iter()
                     .filter(|s| editor::compatible(s, &arches))
                     .map(|s| {
                         let id = text(&s["id"]).to_string();
-                        let locked = automatic.contains(&id) && !self.config.runtimes.contains(&id);
+                        let reason = distribution["unsupportedSnapshotters"]
+                            [text(&s["snapshotter"])]
+                        .as_str();
+                        let locked = (reason.is_some() || automatic.contains(&id))
+                            && !self.config.runtimes.contains(&id);
                         OptionItem {
                             label: format!(
                                 "{id}{}",
-                                if locked {
-                                    " (required by GPU profile)"
+                                if let Some(reason) = reason {
+                                    format!(" (unavailable: {reason})")
+                                } else if locked {
+                                    " (required by GPU profile)".into()
                                 } else {
-                                    ""
+                                    String::new()
                                 }
                             ),
                             id,
@@ -377,7 +384,12 @@ impl<'a> App<'a> {
                     field.clone(),
                     "Runtime classes",
                     options,
-                    self.config.runtimes.clone(),
+                    self.config
+                        .runtimes
+                        .iter()
+                        .chain(automatic.iter())
+                        .cloned()
+                        .collect(),
                     true,
                     false,
                 );
@@ -1511,6 +1523,39 @@ mod tests {
             .iter()
             .map(|cell| cell.symbol())
             .collect()
+    }
+
+    #[test]
+    fn microk8s_disables_erofs_without_selecting_it_and_keeps_nydus_available() {
+        let catalog = crate::config::catalog();
+        let config = crate::init(&catalog, "custom", "microk8s", "amd64").unwrap();
+        let mut app = App::new(&catalog, defaults(&config)).unwrap();
+        app.open(Field::Runtimes).unwrap();
+        if let Screen::Choices(menu) = &mut app.screen {
+            let index = menu
+                .options
+                .iter()
+                .position(|o| o.id == "qemu-nvidia-cpu-runtime-rs")
+                .unwrap();
+            assert!(menu.options[index].locked);
+            assert!(menu.options[index]
+                .label
+                .contains("EROFS requires containerd 2.2"));
+            assert!(!menu.checked[index]);
+            assert!(
+                !menu
+                    .options
+                    .iter()
+                    .find(|o| o.id == "qemu-coco-dev-runtime-rs")
+                    .unwrap()
+                    .locked
+            );
+            menu.cursor = index;
+        } else {
+            panic!("runtime choices missing");
+        }
+        key(&mut app, KeyCode::Char(' '));
+        assert_eq!(app.config.runtimes, config.runtimes);
     }
 
     #[test]

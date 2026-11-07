@@ -42,6 +42,9 @@
           "id": "microk8s",
           "displayName": "MicroK8s",
           "kataDeployValue": "microk8s",
+          "unsupportedSnapshotters": {
+            "erofs": "MicroK8s bundles containerd older than 2.2; EROFS requires containerd 2.2 or newer."
+          },
           "defaultConfigurationOnly": true,
           "sourceUrl": "https://github.com/kata-containers/kata-containers/blob/03cf2ec06a5d302f23af811744f6bcea49988bfb/tools/packaging/kata-deploy/helm-chart/kata-deploy/values.yaml"
         },

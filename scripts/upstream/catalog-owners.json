@@ -4,6 +4,7 @@
   "plannedArchitecture.namespace": "upstream/architecture.yaml",
   "plannedArchitecture.status": "package.json version",
   "plannedArchitecture.notice": "package.json version",
+  "plannedArchitecture.cluster.distributions[].unsupportedSnapshotters.*": "upstream/architecture.yaml; verified Kubernetes runtime smoke matrix",
   "plannedArchitecture.cluster.distributions[].*": "upstream/architecture.yaml and kata-values",
   "plannedArchitecture.cluster.selinux*": "upstream/architecture.yaml and kata-values",
   "plannedArchitecture.images.**": "upstream/architecture.yaml",

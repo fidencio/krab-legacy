@@ -433,6 +433,8 @@ function App() {
     catalog.plannedArchitecture.cluster.distributions.find(
       ({ id }) => id === cluster.distributionId,
     )
+  const runtimeDistributionReason = (shim: VendorCatalog['runtime']['shims'][number]) =>
+    selectedDistribution?.unsupportedSnapshotters?.[shim.snapshotter]
   const installedRuntimeClasses = useMemo(() => {
     const shimIds = resolveRuntimeShimIds(
       selectedVendor,
@@ -648,6 +650,7 @@ function App() {
 
   const toggleRuntimeShim = (shimId: string) => {
     const shim = selectedVendor.runtime.shims.find(({ id }) => id === shimId)
+    if (shim && runtimeDistributionReason(shim) && !runtime.selectedShimIds.includes(shimId)) return
     if (selectedVendor.id === 'custom' && shim &&
       !shim.supportedArches.some((architecture) => customArchitectures.includes(architecture))) return
     setRuntime((current) => ({
@@ -1425,8 +1428,8 @@ function App() {
                                     }
                                   >
                                     {selectedVendor.runtime.shims.filter((shim) => !shim.derivedBase).map((shim) => (
-                                      <option key={shim.id} value={shim.id}>
-                                        {runtimeName(shim.id)}
+                                      <option key={shim.id} value={shim.id} disabled={!!runtimeDistributionReason(shim)}>
+                                        {runtimeName(shim.id)}{runtimeDistributionReason(shim) ? ` — ${runtimeDistributionReason(shim)}` : ''}
                                       </option>
                                     ))}
                                   </select>
@@ -2301,7 +2304,7 @@ function App() {
                               />
                               <span>
                                 <strong>{runtimeName(shim.id)}</strong>
-                                <small>{runtimeUse(shim.id)}</small>
+                                <small>{runtimeDistributionReason(shim) ?? runtimeUse(shim.id)}</small>
                                 <em>
                                   Architectures: {shim.supportedArches.join(' · ')}
                                 </em>
@@ -2338,6 +2341,8 @@ function App() {
                           selectedVendor.id !== 'custom' || selectionGroup !== 'gpu').map((shim) => (
                           <label
                             key={shim.id}
+                            className={runtimeDistributionReason(shim) ? 'runtime-unavailable' : undefined}
+                            title={runtimeDistributionReason(shim)}
                             onClick={(event) => {
                               if ((event.target as HTMLElement).tagName !== 'INPUT') {
                                 event.preventDefault()
@@ -2347,7 +2352,7 @@ function App() {
                           >
                             <input
                               type="checkbox"
-                              disabled={                                (selectedVendor.id === 'custom' && !shim.supportedArches.some((architecture) =>
+                              disabled={(!!runtimeDistributionReason(shim) && !runtime.selectedShimIds.includes(shim.id)) || (selectedVendor.id === 'custom' && !shim.supportedArches.some((architecture) =>
                                   customArchitectures.includes(architecture)))}
                               checked={runtime.selectedShimIds.includes(shim.id)}
                               onChange={() => toggleRuntimeShim(shim.id)}
