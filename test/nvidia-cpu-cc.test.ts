@@ -56,3 +56,19 @@ test('browser and node use the Rust CPU derivation retaining measured metadata a
     }), /integrity metadata/)
   }
 })
+
+
+test('continuous conformance preserves independent new-node enrollment choices', () => {
+  for (const scheduled of [false, true]) {
+    for (const continuous of [false, true]) {
+      const advanced = createAdvancedConfiguration()
+      advanced.scheduledReconcileEnabled = scheduled
+      advanced.scheduledReconcileSchedule = '*/7 * * * *'
+      advanced.continuousConformance = continuous
+      const values = parse(buildValuesBundle(catalog, vendor, {}, cluster,
+        { selectedShimIds: ['qemu-runtime-rs'], runtimeHttpsProxy: '', runtimeNoProxy: '', nvidiaDcgmEnabled: false }, advanced))
+      assert.equal(values['kata-deploy'].job.reconcile?.enabled === true, scheduled)
+      if (scheduled) assert.equal(values['kata-deploy'].job.reconcile.schedule, '*/7 * * * *')
+    }
+  }
+})

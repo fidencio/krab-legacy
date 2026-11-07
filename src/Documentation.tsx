@@ -225,8 +225,10 @@ krab conformance --report node.json --require kvm --failed-nodes`}</Command>
           editor. For a scripted configuration, add one flag:</p>
         <Command>krab init --non-interactive --continuous-conformance --output krab.yaml</Command>
         <p>Deploy normally. KRAB installs and starts the host systemd service, configures NFD result discovery,
-          and derives the checking policy from your selected runtimes. New matching nodes are enrolled through
-          scheduled reconciliation. No separate service installation or worker patch is needed.</p>
+          and derives the checking policy from your selected runtimes. No separate service installation or worker
+          patch is needed.</p>
+        <p>Continuous conformance monitors configured nodes. The separate “New nodes” setting controls
+          scheduled installation on nodes that join later; enabling conformance does not change it.</p>
         <p>The unprivileged checker runs immediately and every 60 seconds. A node must pass a complete
           selected runtime policy to receive <code>feature.node.kubernetes.io/krab-conformance=pass</code>.
           Generated RuntimeClasses require that label. Missing, failed, or expired results do not allow

@@ -50,9 +50,6 @@ pub fn apply_presets(
         }
     }
     if config.advanced.continuous_conformance {
-        runtime["job"]["reconcile"]["enabled"] = json!(true);
-        runtime["job"]["reconcile"]["schedule"] =
-            json!(config.advanced.scheduled_reconcile_schedule.trim());
         for (_, shim) in runtime["shims"].as_object_mut().unwrap().iter_mut() {
             if shim["enabled"] == true {
                 if !shim["runtimeClass"].is_object() {

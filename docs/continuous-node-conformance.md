@@ -10,9 +10,13 @@ krab install --config krab.yaml --context my-cluster
 
 Review the deployment plan, then add `--execute` to install. The only configuration
 field is `advanced.continuousConformance: true`. KRAB generates the host policy
-from the selected runtimes, enables NFD discovery and scheduled node enrollment,
-and requires a fresh passing result in generated RuntimeClasses. No separate
+from the selected runtimes, enables NFD discovery, and requires a fresh passing result in generated RuntimeClasses. No separate
 systemd installation, NFD worker patch, or existing deployment is required.
+
+Continuous conformance and new-node installation are independent. Enable the
+separate **New nodes** reconciliation setting to install on nodes that join later,
+or reapply the deployment through your cluster lifecycle automation. Conformance
+does not enable or change that setting.
 
 ## Deployment lifecycle
 

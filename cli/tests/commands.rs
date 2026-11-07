@@ -561,7 +561,7 @@ fn cpu_presets_are_direct_selections_and_conformance_is_one_flag() {
         assert_eq!(values["intel-tdx-qgs"]["enabled"], tee == "tdx");
         assert_eq!(values["global"]["krab"]["continuousConformance"], true);
         assert_eq!(values["global"]["krab"]["nvidiaCpuTees"], json!([tee]));
-        assert_eq!(values["kata-deploy"]["job"]["reconcile"]["enabled"], true);
+        assert_ne!(values["kata-deploy"]["job"]["reconcile"]["enabled"], true);
         let custom = &values["kata-deploy"]["customRuntimes"]["runtimes"][&name];
         assert_eq!(
             custom["baseConfig"],
