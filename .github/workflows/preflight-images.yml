@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           docker run --rm --read-only --platform linux/${{ matrix.architecture }} \
-            krab-preflight:test --node-report > report.json
+            krab-preflight:test > report.json
           node --input-type=module - '${{ matrix.architecture }}' <<'NODE'
           import assert from 'node:assert/strict'
           import { readFileSync } from 'node:fs'
