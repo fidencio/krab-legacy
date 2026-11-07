@@ -26,6 +26,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: preflight-binaries-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     name: Linux ${{ matrix.architecture }}
