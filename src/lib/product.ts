@@ -1,13 +1,16 @@
 import { createAdvancedConfiguration, type ExplorerCatalog, type FamilySelections } from './artifacts'
 
 export function productFeature(catalog: ExplorerCatalog, name: string) {
-  return catalog.product?.features[name] !== false
+  return catalog.product?.features.advanced !== false && catalog.product?.features[name] !== false
 }
 
 /** Preserve native defaults directly, including auto component choices. */
 export function productDefaults(catalog: ExplorerCatalog) {
   const defaults = catalog.product?.applyDefaults ? catalog.product.defaults : undefined
-  if (!defaults) return null
+  return defaults ? websiteConfiguration(defaults) : null
+}
+
+export function websiteConfiguration(defaults: NonNullable<ExplorerCatalog['product']>['defaults']) {
   return {
     vendorId: defaults.vendor,
     deploymentName: defaults.release,

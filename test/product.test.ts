@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { coreCatalog, coreRequest } from '../src/lib/core.ts'
-import { buildCliConfiguration, type ExplorerCatalog } from '../src/lib/artifacts.ts'
-import { productDefaults, productFeature } from '../src/lib/product.ts'
+import { buildCliConfiguration, importValuesBundle, type ExplorerCatalog } from '../src/lib/artifacts.ts'
+import { productDefaults, productFeature, websiteConfiguration } from '../src/lib/product.ts'
 
 const profile = JSON.parse(readFileSync(new URL('../examples/product-profiles/coco.json', import.meta.url), 'utf8'))
 
@@ -30,4 +30,26 @@ test('a restricted NVIDIA CPU TDX profile retains its pinned reference data with
   const values = coreRequest<Record<string, any>>('generate', catalog.product!.defaults, catalog)
   assert.equal(values['nvidia'].enabled, false)
   assert.equal(values['intel-tdx-qgs'].enabled, true)
+})
+
+
+test('reloading product values canonicalizes explicit pins and booleans without unlocking settings', () => {
+  const catalog = coreRequest<ExplorerCatalog>('product', undefined, coreCatalog, profile)
+  const generated = coreRequest<string>('render', catalog.product!.defaults, catalog)
+  const imported = importValuesBundle(catalog, generated)
+  const config = buildCliConfiguration(catalog.vendors[0], imported.selections, imported.cluster,
+    imported.runtime, imported.advanced, 'coco', catalog.plannedArchitecture.namespace)
+  const normalized = coreRequest<ReturnType<typeof buildCliConfiguration>>('normalizeProduct', config, catalog)
+  assert.equal(normalized.components.nfd, null)
+  assert.equal(normalized.advanced.images.kataDeploy.reference, '')
+  assert.deepEqual(coreRequest('generate', normalized, catalog), coreRequest('generate', catalog.product!.defaults, catalog))
+  const restored = websiteConfiguration(normalized)
+  assert.equal(restored.advanced.components.nfd, null)
+  config.advanced.images.kataDeploy.tag = 'other'
+  assert.throws(() => coreRequest('normalizeProduct', config, catalog), /imageOverrides is fixed/)
+  const locked = coreRequest<ExplorerCatalog>('product', undefined, coreCatalog, {
+    ...profile, features: { ...profile.features, advanced: false, components: true },
+  })
+  assert.equal(productFeature(locked, 'components'), false)
+  assert.equal(productFeature(locked, 'continuousConformance'), false)
 })

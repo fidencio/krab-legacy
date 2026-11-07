@@ -16,8 +16,8 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react'
-import { coreCatalog } from './lib/core'
-import { productDefaults, productFeature } from './lib/product'
+import { coreCatalog, coreRequest } from './lib/core'
+import { productDefaults, productFeature, websiteConfiguration } from './lib/product'
 import packageData from '../package.json'
 import krabLogoDark from './assets/brands/krab-kata-hybrid.png'
 import krabLogoLight from './assets/brands/krab-kata-hybrid-light.png'
@@ -579,7 +579,17 @@ function App() {
   const loadValuesFile = async (file: File | undefined) => {
     if (!file) return
     try {
-      const imported = importValuesBundle(catalog, await file.text(), file.name)
+      let imported = importValuesBundle(catalog, await file.text(), file.name)
+      if (catalog.product) {
+        const vendor = catalog.vendors.find(({ id }) => id === imported.vendorId)
+        if (!vendor) throw new Error('This deployment path is unavailable in this product.')
+        const config = buildCliConfiguration(vendor, imported.selections, imported.cluster,
+          imported.runtime, imported.advanced,
+          normalizeDeploymentName(imported.deploymentName, catalog.plannedArchitecture.charts.krab.releaseName),
+          catalog.plannedArchitecture.namespace)
+        const normalized = coreRequest<ReturnType<typeof buildCliConfiguration>>('normalizeProduct', config, catalog)
+        imported = { ...imported, ...websiteConfiguration(normalized) }
+      }
       setSelectedVendorId(imported.vendorId)
       setSelections(imported.selections)
       setCluster(imported.cluster)

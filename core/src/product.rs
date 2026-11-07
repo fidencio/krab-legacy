@@ -313,10 +313,10 @@ pub fn enabled(catalog: &Value, feature: &str) -> bool {
 }
 
 /// Disabled features are fixed at the operator's defaults, including imported files.
-pub fn validate(config: &Config, catalog: &Value) -> Result<()> {
+pub fn normalize(config: &Config, catalog: &Value) -> Result<Config> {
     let product = &catalog["product"];
     if !product.is_object() {
-        return Ok(());
+        return Ok(config.clone());
     }
     if let Some(allowed) = product["architectures"].as_array() {
         if config
@@ -327,7 +327,7 @@ pub fn validate(config: &Config, catalog: &Value) -> Result<()> {
             return Err("Architecture is disabled by this product profile".into());
         }
     }
-    let current = serde_json::to_value(config).map_err(|e| e.to_string())?;
+    let mut current = serde_json::to_value(config).map_err(|e| e.to_string())?;
     let defaults = &product["defaults"];
     for (feature, paths) in [
         ("advanced", &["/advanced", "/runtime", "/components"][..]),
@@ -355,7 +355,25 @@ pub fn validate(config: &Config, catalog: &Value) -> Result<()> {
                 .iter()
                 .any(|p| current.pointer(p) != defaults.pointer(p))
         {
-            return Err(format!("{feature} is fixed by this product profile"));
+            let mut fixed = current.clone();
+            for path in paths {
+                *fixed
+                    .pointer_mut(path)
+                    .ok_or("Invalid product setting path")? = defaults
+                    .pointer(path)
+                    .ok_or("Invalid product defaults")?
+                    .clone();
+            }
+            let before: Config =
+                serde_json::from_value(current.clone()).map_err(|e| e.to_string())?;
+            let after: Config = serde_json::from_value(fixed.clone()).map_err(|e| e.to_string())?;
+            // Reuse generation to compare effective settings. An explicit image pin
+            // or component boolean can be identical to an automatic default.
+            if crate::values::preview(&before, catalog)? != crate::values::preview(&after, catalog)?
+            {
+                return Err(format!("{feature} is fixed by this product profile"));
+            }
+            current = fixed;
         }
     }
     if product["restricted"] == true
@@ -367,7 +385,11 @@ pub fn validate(config: &Config, catalog: &Value) -> Result<()> {
         return Err("Helm overrides cannot bypass product profile restrictions".into());
     }
     find(&catalog["vendors"], &config.vendor)?;
-    Ok(())
+    serde_json::from_value(current).map_err(|e| e.to_string())
+}
+
+pub fn validate(config: &Config, catalog: &Value) -> Result<()> {
+    normalize(config, catalog).map(|_| ())
 }
 
 #[cfg(test)]
@@ -418,6 +440,25 @@ mod tests {
         value["advanced"]["images"]["kataDeploy"]["tag"] = json!("other");
         assert!(crate::values::build(&serde_json::from_value(value).unwrap(), &applied).is_err());
     }
+    #[test]
+    fn explicit_default_images_and_component_booleans_normalize_for_editing() {
+        let mut source = profile();
+        source["features"]["components"] = json!(false);
+        let catalog = apply(&crate::config::catalog(), &source).unwrap();
+        let baseline: Config =
+            serde_json::from_value(catalog["product"]["defaults"].clone()).unwrap();
+        let values = crate::values::build(&baseline, &catalog).unwrap();
+        let mut expanded = serde_json::to_value(&baseline).unwrap();
+        expanded["components"]["nfd"] = json!(true);
+        expanded["advanced"]["images"]["kataDeploy"]["reference"] =
+            values["kata-deploy"]["image"]["reference"].clone();
+        expanded["advanced"]["images"]["kataDeploy"]["tag"] =
+            values["kata-deploy"]["image"]["tag"].clone();
+        let expanded: Config = serde_json::from_value(expanded).unwrap();
+        assert_eq!(normalize(&expanded, &catalog).unwrap(), baseline);
+        crate::values::build(&expanded, &catalog).unwrap();
+    }
+
     #[test]
     fn profile_typos_empty_products_and_invalid_defaults_fail_closed() {
         for change in [
