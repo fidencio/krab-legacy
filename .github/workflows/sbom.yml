@@ -59,7 +59,7 @@ jobs:
             "dist-sbom/krab-precheck-${version}.spdx.json" \
             "${RUNNER_TEMP}/krab-precheck-render.yaml"
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: chart-sboms
           path: dist-sbom/*.spdx.json
@@ -72,8 +72,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
       - uses: anchore/sbom-action/download-syft@v0
         id: syft
         with:
@@ -98,7 +98,7 @@ jobs:
               -o "spdx-json=dist-sbom/krab-preflight-${version}-linux-${arch}.spdx.json"
           done
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: preflight-image-sboms
           path: dist-sbom/*.spdx.json
@@ -111,8 +111,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
       - uses: anchore/sbom-action/download-syft@v0
         id: syft
         with:
@@ -137,7 +137,7 @@ jobs:
               -o "spdx-json=dist-sbom/krab-collector-${version}-linux-${arch}.spdx.json"
           done
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: collector-image-sboms
           path: dist-sbom/*.spdx.json

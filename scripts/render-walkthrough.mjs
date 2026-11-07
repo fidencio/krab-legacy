@@ -38,42 +38,51 @@ try {
   const target=await call('Target.createTarget',{url:'about:blank'})
   const {sessionId}=await call('Target.attachToTarget',{targetId:target.targetId,flatten:true})
   const page=(method,params)=>call(method,params,sessionId)
-  await page('Emulation.setDeviceMetricsOverride',{width:1440,height:920,deviceScaleFactor:1,mobile:false})
+  await page('Emulation.setDeviceMetricsOverride',{width:1920,height:1080,deviceScaleFactor:1,mobile:false})
   await page('Page.enable')
   const {frameTree}=await page('Page.getFrameTree')
-  await page('Page.setDocumentContent',{frameId:frameTree.frame.id,html:'<style>body{margin:0;background:#0b1220}canvas{display:block}</style><canvas width="1440" height="920"></canvas>'})
+  await page('Page.setDocumentContent',{frameId:frameTree.frame.id,html:'<style>body{margin:0;background:#0b1220}canvas{display:block}</style><canvas width="1920" height="1080"></canvas>'})
   const result=await page('Runtime.evaluate',{awaitPromise:true,returnByValue:true,expression:`(async () => {
     const recording=${JSON.stringify(recording)}
     const canvas=document.querySelector('canvas'), ctx=canvas.getContext('2d')
     const images=new Map()
     for(const frame of recording.frames)if(frame.image){const img=new Image();img.src='data:image/png;base64,'+frame.image;await img.decode();images.set(frame,img)}
     const draw=frame=>{
-      ctx.fillStyle='#0b1220';ctx.fillRect(0,0,1440,920)
-      ctx.font='600 16px Menlo, monospace';ctx.fillStyle='#f15b3e';ctx.fillText('KRAB',32,29)
-      ctx.font='13px Menlo, monospace';ctx.fillStyle='#a8b3c2';ctx.fillText(recording.title+' · '+recording.version,96,29)
-      if(frame.image)ctx.drawImage(images.get(frame),0,40,1440,800)
+      ctx.fillStyle='#0b1220';ctx.fillRect(0,0,1920,1080)
+      ctx.font='600 24px Menlo, monospace';ctx.fillStyle='#f15b3e';ctx.fillText('KRAB',40,34)
+      ctx.font='20px Menlo, monospace';ctx.fillStyle='#a8b3c2';ctx.fillText(recording.title+' · '+recording.version,128,34)
+      ctx.imageSmoothingEnabled=false
+      if(frame.image)ctx.drawImage(images.get(frame),0,48,1920,936)
       else frame.cells.forEach((row,y)=>row.forEach(([ch,fg,bg,bold],x)=>{
-        const w=1344/row.length,h=760/frame.cells.length,font=Math.min(22,w/0.6)
-        ctx.fillStyle=bg;ctx.fillRect(48+x*w,52+y*h,w+0.1,h)
-        if(ch!==' '){ctx.fillStyle=fg;ctx.font=(bold?'600 ':'')+font+'px Menlo, monospace';ctx.fillText(ch,48+x*w,52+y*h+font)}
+        const w=1792/row.length,h=900/frame.cells.length,font=Math.min(30,w/0.6)
+        ctx.fillStyle=bg;ctx.fillRect(64+x*w,64+y*h,w+0.1,h)
+        if(ch!==' '){ctx.fillStyle=fg;ctx.font=(bold?'600 ':'')+font+'px Menlo, monospace';ctx.fillText(ch,64+x*w,64+y*h+font)}
       }))
-      ctx.fillStyle='#2c3a4d';ctx.fillRect(32,840,1376,1)
-      ctx.fillStyle='#e2e8f0';ctx.font='17px system-ui, sans-serif'
-      const words=frame.caption.split(' ');let line='',y=873
-      for(const word of words){const next=line+word+' ';if(ctx.measureText(next).width>1120){ctx.fillText(line,32,y);line=word+' ';y+=25}else line=next}
-      ctx.fillText(line,32,y)
-      if(frame.keys){ctx.font='600 15px Menlo, monospace';ctx.fillStyle='#ff8a70';ctx.textAlign='right';ctx.fillText(frame.keys,1408,873);ctx.textAlign='left'}
+      ctx.fillStyle='#2c3a4d';ctx.fillRect(40,984,1840,1)
+      ctx.fillStyle='#e2e8f0';ctx.font='26px system-ui, sans-serif'
+      const words=frame.caption.split(' ');let line='',y=1020
+      for(const word of words){const next=line+word+' ';if(ctx.measureText(next).width>1820){ctx.fillText(line,40,y);line=word+' ';y+=30}else line=next}
+      ctx.fillText(line,40,y)
+      if(frame.keys){ctx.font='600 22px Menlo, monospace';ctx.fillStyle='#ff8a70';ctx.textAlign='right';ctx.fillText(frame.keys,1880,1070);ctx.textAlign='left'}
     }
     draw(recording.frames[0])
     window.__poster=canvas.toDataURL('image/png').split(',')[1]
     const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8'].find(m=>MediaRecorder.isTypeSupported(m))
     if(!mime)throw Error('No WebM encoder available')
-    const stream=canvas.captureStream(12), recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:1000000})
+    const stream=canvas.captureStream(24)
+    const videoTrack=stream.getVideoTracks()[0]
+    videoTrack.contentHint='detail'
+    const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:16000000})
     const chunks=[]
     const ended=new Promise(resolve=>recorder.onstop=resolve)
     recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data)}
     recorder.start(1000)
-    for(const frame of recording.frames){draw(frame);await new Promise(r=>setTimeout(r,frame.seconds*1000))}
+    // Feed a real frame cadence: isolated still updates starve the encoder's
+    // per-frame bitrate budget and make UI text blurry despite a large bitrate.
+    let current=recording.frames[0]
+    const cadence=setInterval(()=>{draw(current);videoTrack.requestFrame?.()},1000/24)
+    for(const frame of recording.frames){current=frame;draw(frame);videoTrack.requestFrame?.();await new Promise(r=>setTimeout(r,frame.seconds*1000))}
+    clearInterval(cadence)
     recorder.stop();await ended;stream.getTracks().forEach(t=>t.stop())
     const blob=new Blob(chunks,{type:mime})
     return await new Promise(resolve=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);reader.readAsDataURL(blob)})

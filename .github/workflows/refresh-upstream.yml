@@ -63,7 +63,7 @@ jobs:
         run: npm test
       - if: steps.candidate.outputs.changed == 'true'
         run: npm run build
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@v8
         id: pr
         if: steps.candidate.outputs.changed == 'true'
         with:
@@ -123,7 +123,7 @@ jobs:
         run: npm test
       - if: steps.candidate.outputs.changed == 'true'
         run: npm run build
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@v8
         id: pr
         if: steps.candidate.outputs.changed == 'true'
         with:

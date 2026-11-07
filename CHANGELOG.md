@@ -25,6 +25,8 @@ All notable changes to KRAB are documented in this file.
 - Cross-compile preflight images on the builder CPU, cache Rust and container
   builds, and reuse verified CI binaries for the exact release commit.
 - Retry temporary attestation-service failures before stopping publication.
+- Use Node.js 24 actions throughout the build and release workflows.
+- Improve walkthrough readability with closer UI capture and 1080p video encoding.
 - Move node report uploads and readiness filters from the website to the TUI / CLI.
   The website recommends terminal conformance, node selectors, and failure views.
 

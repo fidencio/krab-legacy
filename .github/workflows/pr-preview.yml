@@ -37,7 +37,7 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/pr/${{ github.event.pull_request.number }}/
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: pr-preview-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
           path: dist

@@ -22,14 +22,15 @@ try {
   const {sessionId}=await call('Target.attachToTarget',{targetId:target.targetId,flatten:true})
   const page=(method,params)=>call(method,params,sessionId)
   const action=async expression=>{const r=await page('Runtime.evaluate',{expression,returnByValue:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));await pause(300)}
-  await page('Emulation.setDeviceMetricsOverride',{width:1440,height:800,deviceScaleFactor:1,mobile:false})
+  // Capture a closer, readable viewport at native 2x pixel density.
+  await page('Emulation.setDeviceMetricsOverride',{width:960,height:468,deviceScaleFactor:2,mobile:false})
   await page('Page.enable');await page('Page.navigate',{url:'http://127.0.0.1:5173/'})
   await pause(1400)
   const frames=[]
   const capture=async(caption,keys,seconds=4)=>{const shot=await page('Page.captureScreenshot',{format:'png'});frames.push({caption,keys,seconds,image:shot.data})}
   // Pause on the actual target before activating it so viewers can follow clicks.
   const cue=async(expression,caption,keys)=>{
-    await action(`{const target=(${expression});if(!target)throw Error('Walkthrough target missing');target.scrollIntoView({behavior:'instant',block:'center'});const rect=target.getBoundingClientRect();const cue=document.createElement('div');cue.id='krab-recording-cue';Object.assign(cue.style,{position:'fixed',left:(rect.left-6)+'px',top:(rect.top-6)+'px',width:(rect.width+12)+'px',height:(rect.height+12)+'px',border:'3px solid #ff8a70',borderRadius:'10px',boxShadow:'0 0 0 4px #101b2be6',pointerEvents:'none',zIndex:'2147483647'});document.body.append(cue)}`)
+    await action(`{const target=(${expression});if(!target)throw Error('Walkthrough target missing');target.scrollIntoView({behavior:'instant',block:'center'});const rect=target.getBoundingClientRect();const cue=document.createElement('div');cue.id='krab-recording-cue';Object.assign(cue.style,{position:'fixed',left:(rect.left-6)+'px',top:(rect.top-6)+'px',width:(rect.width+12)+'px',height:(rect.height+12)+'px',border:'3px solid #ff8a70',borderRadius:'10px',boxShadow:'0 0 0 4px #101b2be6',pointerEvents:'none',zIndex:'2147483647'});document.documentElement.append(cue)}`)
     await capture(caption,keys,3)
     await action(`document.getElementById('krab-recording-cue').remove()`)
   }

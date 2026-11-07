@@ -36,7 +36,7 @@
 .docs-content .docs-note { padding: 12px 16px; border-left: 2px solid var(--kata-orange); background: var(--surface-raised); font-size: 13px; }
 .docs-inline-link { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
 .docs-walkthrough { margin: 24px 0; }
-.docs-walkthrough video { display: block; width: 100%; aspect-ratio: 1440 / 920; background: #0b1220; border: 1px solid var(--line); border-radius: 6px; }
+.docs-walkthrough video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #0b1220; border: 1px solid var(--line); border-radius: 6px; }
 .docs-walkthrough figcaption { margin: 8px 0; color: var(--muted); font-size: 11px; }
 .docs-walkthrough summary { font-size: 12px; color: var(--muted); cursor: pointer; }
 .docs-walkthrough li { font-size: 13px; }
