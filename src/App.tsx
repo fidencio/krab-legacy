@@ -964,7 +964,7 @@ function App() {
                 ))}
               </section>
 
-              <CliGuide />
+              <CliGuide product={!!catalog.product} />
 
               <IommufdSetupNote reports={[]} />
 

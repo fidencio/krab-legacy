@@ -4,11 +4,12 @@ import { cliArchiveUrl, cliAssetBase, cliPlatforms, cliRepository } from './lib/
 import recordings from './generated/walkthroughs.json'
 import cliReference from './generated/cli-reference.json'
 import './Documentation.css'
+import cocoProfile from '../examples/product-profiles/coco.json'
 
 const sections = [
   ['start', 'Start here'], ['install', 'Install KRAB'], ['website', 'Use the website'],
   ['tui', 'Use the terminal editor'], ['cpu-cc', 'NVIDIA CPU TDX / SNP'], ['cli', 'Automate with the CLI'],
-  ['checks', 'Check your nodes'], ['service', 'Continuous conformance'], ['reference', 'Command reference'],
+  ['checks', 'Check your nodes'], ['service', 'Continuous conformance'], ['self-host', 'Run your own product'], ['reference', 'Command reference'],
 ] as const
 const shortcuts = [
   ['↑ / ↓', 'Move between choices and sections'], ['Space', 'Toggle a checkbox'],
@@ -242,6 +243,34 @@ cat /var/lib/krab/conformance/latest.json`}</Command>
         <p className="docs-note">Nodes need systemd. Conformance checks host prerequisites;
           verify workload launch and attestation separately. Label changes affect new scheduling,
           and do not evict already running workloads.</p>
+      </section>
+
+      <section id="docs/self-host">
+        <h2>Run your own KRAB product</h2>
+        <p>Host a static builder with your own name, logo, defaults, and available choices.
+          The website and CLI use the same product profile and Rust engine. Both retain a
+          “Powered by KRAB” credit.</p>
+        <p><a download="krab-profile.json" href={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(cocoProfile, null, 2))}`}>
+          <Download size={14} /> Download an example CoCo profile</a></p>
+        <ol className="docs-steps">
+          <li><strong>Choose your product.</strong> Edit the JSON file’s name, description, logo path,
+            runtime and platform lists, feature flags, and native configuration defaults.
+            The example uses CoCo-dev, a development runtime without a hardware TEE.</li>
+          <li><strong>Deploy the static site.</strong> Build the website container from the matching
+            source revision, or serve its portable static-site artifact on your own host.
+            Place <code>krab-profile.json</code> and the logo beside <code>index.html</code>.
+            Profile changes take effect on reload, without rebuilding Rust or running an API server.</li>
+          <li><strong>Bundle the matching CLI.</strong> Provide the native archive from the same build
+            with the same <code>krab-profile.json</code> beside the executable, or select it explicitly:</li>
+        </ol>
+        <Command>{`krab --profile krab-profile.json init --non-interactive --output krab.yaml
+krab --profile krab-profile.json edit --config krab.yaml
+krab --profile krab-profile.json generate --config krab.yaml --output values.yaml`}</Command>
+        <p>Disabled settings stay at the product defaults, including in imported configurations.
+          Invalid profiles block the builder with an explanation.</p>
+        <p>Profiles are available in Next; use matching website and CLI artifacts from the same source revision.
+          Previously released 0.2.10 binaries do not include this feature.</p>
+        <p><a href={`${source}/docs/self-host.md`}>Container commands and full profile field reference <ExternalLink size={12} /></a></p>
       </section>
 
       <section id="docs/reference">
