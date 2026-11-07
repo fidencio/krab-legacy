@@ -8,9 +8,10 @@ import './Documentation.css'
 const sections = [
   ['start', 'Start here'], ['install', 'Install KRAB'], ['website', 'Use the website'],
   ['tui', 'Use the terminal editor'], ['cpu-cc', 'NVIDIA CPU TDX / SNP'], ['cli', 'Automate with the CLI'],
-  ['checks', 'Check your nodes'], ['reference', 'Command reference'],
+  ['checks', 'Check your nodes'], ['service', 'Continuous conformance'], ['reference', 'Command reference'],
 ] as const
 const cpuCcHelperUrl = new URL('../scripts/nvidia-cpu-cc.py', import.meta.url).href
+const nfdMountPatchUrl = new URL('../prototypes/node-conformance/nfd-worker-mount.patch.yaml', import.meta.url).href
 const shortcuts = [
   ['↑ / ↓', 'Move between choices and sections'], ['Space', 'Toggle a checkbox'],
   ['Enter', 'Confirm a choice or open a section'], ['Esc', 'Cancel a section and restore its previous settings'],
@@ -235,6 +236,61 @@ krab conformance --report node.json --require kvm --failed-nodes`}</Command>
         </div>
         <p className="docs-note">These checks establish host prerequisites. Workload launch and attestation need
           separate validation. Local host probes require Linux; configuration and remote checks also run on macOS.</p>
+      </section>
+
+      <section id="docs/service">
+        <h2>Keep checking with systemd</h2>
+        <p>Install the optional conformance service on each Linux node you want to monitor.
+          It checks immediately and every 60 seconds, saves JSON evidence, and publishes an expiring
+          result for Node Feature Discovery (NFD). Systemd supervises the unprivileged checker and
+          restarts it after a crash or watchdog timeout. The checking path needs no Kubernetes credentials.</p>
+        <h3>Install on a Linux node</h3>
+        <p>Use the standalone <code>krab-preflight</code> checker for the node’s architecture.
+          The full <code>krab</code> CLI is a separate download.</p>
+        {development ? <p className="docs-note">Matching development checkers are available from a successful
+          {' '}<a href={`${cliRepository}/actions/workflows/preflight-binaries.yml`}>standalone preflight build</a>
+          {' '}(GitHub sign-in required). Published checker downloads are in the
+          {' '}<a href={`${import.meta.env.BASE_URL}../#docs/service`}>stable guide</a>.</p> : <p className="docs-download-row">
+          <a href={`${cliAssetBase(version)}/krab-preflight-${version}-linux-amd64.tar.gz`}>Linux x86_64 checker</a>
+          <a href={`${cliAssetBase(version)}/krab-preflight-${version}-linux-arm64.tar.gz`}>Linux ARM64 checker</a>
+          <a href={`${cliAssetBase(version)}/SHA256SUMS`}>Checksums</a>
+        </p>}
+        <p>Put the archive and release checksums in one folder. The host needs systemd,
+          systemctl, sha256sum, and rm. Install with root privileges:</p>
+        <Command>{`krab_arch=amd64 # Use arm64 for ARM64 nodes
+sha256sum --ignore-missing --check SHA256SUMS
+mkdir -p krab-checker
+tar -xzf krab-preflight-${version}-linux-\${krab_arch}.tar.gz -C krab-checker
+cd krab-checker
+sha256sum --check SHA256SUMS
+krab_checker_sha256="$(awk '$2 == "krab-preflight" {print $1}' SHA256SUMS)"
+sudo ./krab-preflight conformance install \\
+  --checker-sha256 "$krab_checker_sha256" --require kvm`}</Command>
+        <p>The installer enables and starts <code>krab-conformance.service</code> and verifies that it is active.
+          Choose the policy for your node pool: use <code>--require tdx</code> or <code>--require snp</code>
+          {' '}for that CPU TEE, and <code>--require-any gpu-cc,gpu-ppcie</code> to accept either GPU capability.
+          With the full CLI, use <code>krab conformance install --checker ./krab-preflight</code> with
+          the same checksum and policy options.</p>
+        <h3>Inspect and remove</h3>
+        <Command>{`systemctl status krab-conformance.service
+journalctl -u krab-conformance.service --follow
+cat /var/lib/krab/conformance/latest.json
+
+# Stop, disable, and remove the service; retain saved JSON evidence
+sudo /opt/krab/conformance/krab-preflight conformance remove`}</Command>
+        <h3>Publish the result as a node label</h3>
+        <p>This experimental integration is opt-in. Mount <code>/run/krab/features</code> read-only into
+          the existing NFD worker at the same path, keeping its existing <code>features.d</code> mount.
+          {' '}<a href={nfdMountPatchUrl} download>Download the example worker patch</a> and adapt its workload,
+          namespace, and container name. Enable NFD local discovery, keep a finite rediscovery interval,
+          and allow the resulting label through your NFD filters.</p>
+        <Command>{`# Add to your KRAB Helm values
+nodeConformance:
+  enabled: true`}</Command>
+        <p>NFD publishes <code>feature.node.kubernetes.io/krab-conformance</code> as
+          {' '}<code>pass</code>, <code>fail</code>, or <code>error</code>. An absent or expired result does
+          not count as a pass. Allow for both the checker and NFD polling intervals when observing changes.
+          Removing the host service and disabling the chart rule are separate steps.</p>
       </section>
 
       <section id="docs/reference">
