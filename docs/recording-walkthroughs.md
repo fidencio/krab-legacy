@@ -31,8 +31,10 @@ The renderer converts recorded states into legible WebM clips using Chrome's
 canvas and MediaRecorder APIs, with captions showing each real action. It also
 writes a poster, WebVTT captions, and the text transcript. Terminal replay uses
 larger text at 100 columns. The WebM Info duration is filled explicitly so native
-browser controls can seek normally. There is no audio track; both burned-in
-captions and optional browser captions communicate the steps.
+browser controls can seek normally. There is no audio track. The embedded
+captions communicate the steps; the on-site transcript repeats them as readable
+text. WebVTT files remain available as recording artifacts, but the player does
+not attach a browser CC track, which would duplicate the embedded captions.
 
 Before committing, play and seek each video in the on-site guide, check captions,
 read the transcripts, and verify the documentation at desktop and phone widths.

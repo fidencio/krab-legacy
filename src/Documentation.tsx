@@ -37,7 +37,6 @@ function Walkthrough({ name }: { name: keyof typeof recordings }) {
   return <figure className="docs-walkthrough">
     <video controls playsInline preload="none" poster={`${base}.png`} aria-label={recording.title}>
       <source src={`${base}.webm`} type="video/webm" />
-      <track kind="captions" src={`${base}.vtt`} srcLang="en" label="English" default />
       <p>Your browser cannot play this recording. Read the transcript below.</p>
     </video>
     <figcaption>{recording.title} · {recording.duration}s · Recorded with {recording.version}</figcaption>

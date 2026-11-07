@@ -36,7 +36,7 @@ test('documentation is an on-site route and the compact terminal strip has no in
   for (const section of ['install', 'website', 'tui', 'cli', 'checks', 'reference']) {
     assert.ok(docs.includes(`id="docs/${section}"`))
   }
-  assert.match(docs, /<track kind="captions"/)
+  assert.doesNotMatch(docs, /<track\b/)
   assert.match(docs, /Read the walkthrough/)
   assert.match(docs, /preload="none"/)
 })
