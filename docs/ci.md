@@ -10,6 +10,6 @@ The **Native CLI** workflow provides the three platform archives and checksums. 
 
 Dependabot checks Rust crates daily and npm, Docker, and Actions weekly, with a seven-day cooldown. Updates use ordinary PR review and CI; automatic merging is not enabled.
 
-**Rust quality** checks formatting, Clippy, tests, LLVM coverage, RustSec advisories, licenses, and dependency sources for every crate. Coverage reports are downloadable; no arbitrary coverage threshold is imposed before a baseline is established. CodeQL scans Rust and Actions, zizmor scans workflow security, and actionlint checks workflow syntax.
+**Rust quality** checks formatting, Clippy, tests, LLVM coverage, RustSec advisories, licenses, and dependency sources for every crate. RustSec vulnerabilities and unsound dependencies fail CI. Direct unmaintained dependencies fail the policy check; transitive maintenance notices remain visible in cargo-audit output. Coverage reports are downloadable; no arbitrary coverage threshold is imposed before a baseline is established. CodeQL scans Rust and Actions, zizmor scans workflow security, and actionlint checks workflow syntax.
 
 Expensive checks stay outside the release path: weekly **Rust deep checks** run unused-dependency analysis, binary-size reports, and Miri for the shared CPU/profile policy code. Daily **Fuzzing** exercises the shared engine request parser and CPU kernel-parameter parser, uploading any crash input. Both workflows can be dispatched manually. These schedules become active after merge to the default branch.

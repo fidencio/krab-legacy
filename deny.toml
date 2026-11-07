@@ -2,6 +2,9 @@
 [advisories]
 version = 2
 ignore = []
+# Keep transitive maintenance notices visible in cargo-audit; block direct use.
+unmaintained = "workspace"
+unsound = "all"
 
 [licenses]
 version = 2

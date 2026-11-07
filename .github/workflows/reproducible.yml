@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
       - run: rustup toolchain install 1.95.0 --profile minimal
@@ -41,7 +41,7 @@ jobs:
           krab_second="$RUNNER_TEMP/second-longer-path/source/cli/target/release/krab"
           sha256sum "$krab_first" "$krab_second" | tee reproducibility.txt
           cmp "$krab_first" "$krab_second"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: cli-reproducibility

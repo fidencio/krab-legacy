@@ -8,7 +8,7 @@ const PROGRAM: &str = "mkfs.erofs";
 const REQUIRED_OPTIONS: &[&str] = &["mkfs-time", "sort"];
 
 pub fn check(paths: &Paths) -> Result {
-    let mut directories: Vec<PathBuf> = if paths.host_root == PathBuf::from("/") {
+    let mut directories: Vec<PathBuf> = if paths.host_root == std::path::Path::new("/") {
         env::var_os("PATH")
             .map(|path| env::split_paths(&path).collect())
             .unwrap_or_default()

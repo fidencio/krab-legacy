@@ -495,3 +495,5 @@ See [CHANGELOG.md](CHANGELOG.md) for release contents and known limitations.
 The Pages workflow runs generation, tests, lint, and the production build. It
 sets Vite's base path from the repository name, so the resulting application is
 fully static and works from a project Pages URL.
+
+See [CI and PR artifacts](docs/ci.md) for preview deployments, downloadable charts and binaries, and dependency and Rust checks.

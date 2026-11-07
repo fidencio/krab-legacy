@@ -19,7 +19,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/attest@v4
+    - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
       id: first
       continue-on-error: true
       with:
@@ -31,7 +31,7 @@ runs:
     - if: steps.first.outcome == 'failure'
       shell: bash
       run: sleep 10
-    - uses: actions/attest@v4
+    - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
       id: second
       if: steps.first.outcome == 'failure'
       continue-on-error: true
@@ -44,7 +44,7 @@ runs:
     - if: steps.second.outcome == 'failure'
       shell: bash
       run: sleep 20
-    - uses: actions/attest@v4
+    - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
       if: steps.second.outcome == 'failure'
       with:
         subject-path: ${{ inputs.subject-path }}

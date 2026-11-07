@@ -54,7 +54,7 @@ test('standalone checker builds gate release publication and deliver both archit
   assert.equal(release.jobs.preflight_binaries.uses, './.github/workflows/preflight-binaries.yml')
   assert.deepEqual(release.jobs.release.needs, ['existing_builds', 'preflight_binaries', 'cli_binaries'])
   const steps = release.jobs.release.steps
-  const download = steps.find((s: { uses: string }) => s.uses === 'actions/download-artifact@v8')
+  const download = steps.find((s: { uses: string }) => s.uses?.startsWith('actions/download-artifact@'))
   assert.equal(download.with.pattern, 'krab-preflight-linux-*')
   assert.equal(download.with['merge-multiple'], true)
   assert.equal(download.with.path, 'dist-binaries')

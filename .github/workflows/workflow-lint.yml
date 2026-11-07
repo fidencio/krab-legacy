@@ -15,10 +15,14 @@ jobs:
   actionlint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: taiki-e/install-action@4684b8405694ae9dd42c9f39ba901a70ae83f4a3 # v2.82.9
-        with:
-          tool: actionlint@1.7.12
+      - name: Install checksum-verified actionlint
+        run: |
+          curl --fail --location --output "$RUNNER_TEMP/actionlint.tar.gz" https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/actionlint"
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP/actionlint" actionlint
+          echo "$RUNNER_TEMP/actionlint" >> "$GITHUB_PATH"
       - run: actionlint -shellcheck= -pyflakes=
