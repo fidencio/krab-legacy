@@ -7,7 +7,9 @@ FROM --platform=linux/arm64 ghcr.io/kata-containers/kata-device-provisioner:0.1.
 FROM --platform=$BUILDPLATFORM rust:1.95-slim AS cross-toolchain
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc-x86-64-linux-gnu gcc-aarch64-linux-gnu \
-    gcc-powerpc64le-linux-gnu gcc-s390x-linux-gnu && \
+    gcc-powerpc64le-linux-gnu gcc-s390x-linux-gnu \
+    libc6-dev-amd64-cross libc6-dev-arm64-cross \
+    libc6-dev-ppc64el-cross libc6-dev-s390x-cross && \
     rm -rf /var/lib/apt/lists/*
 RUN rustup target add x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu \
     powerpc64le-unknown-linux-gnu s390x-unknown-linux-gnu
