@@ -53,6 +53,17 @@ jobs:
           krab_linker_dir="${krab_sysroot}/lib/rustlib/${krab_host}/bin"
           test -x "${krab_linker_dir}/rust-lld"
           echo "${krab_linker_dir}" >> "${GITHUB_PATH}"
+      - name: Cache standalone checker compilation
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            preflight/target
+          key: preflight-rust-1.95-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-${{ hashFiles('preflight/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            preflight-rust-1.95-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-${{ hashFiles('preflight/Cargo.lock') }}-
+            preflight-rust-1.95-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-
       - name: Test and build the static checker
         run: |
           cargo +1.95.0 test --locked --manifest-path preflight/Cargo.toml --target '${{ matrix.target }}'

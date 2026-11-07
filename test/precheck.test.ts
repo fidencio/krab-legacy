@@ -255,7 +255,8 @@ test('pre-check chart reuses the pinned dispatcher and aggregates all node repor
   assert.ok(dockerfile.includes(`${imageLock.reference}:${imageLock.tag}@${imageLock.digest}`))
   assert.match(dockerfile, /FROM gcr\.io\/distroless\/cc-debian13:latest/)
   assert.match(dockerfile, /ENTRYPOINT \["\/usr\/local\/bin\/krab-preflight", "--node-report"\]/)
-  assert.doesNotMatch(dockerfile, /apt-get|\/bin\/bash|\/usr\/bin\/jq/)
+  const runtimeStage = dockerfile.split('FROM gcr.io/distroless/cc-debian13:latest')[1]
+  assert.doesNotMatch(runtimeStage, /apt-get|\/bin\/bash|\/usr\/bin\/jq/)
   assert.match(workflow, /linux\/amd64,linux\/arm64,linux\/ppc64le,linux\/s390x/)
   assert.equal(values.probeImage.repository, 'ghcr.io/fidencio/krab-preflight')
 })

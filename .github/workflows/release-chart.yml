@@ -70,6 +70,8 @@ jobs:
       - name: Install shared browser engine toolchain
         run: rustup toolchain install 1.95.0 --profile minimal --target wasm32-unknown-unknown
 
+      - uses: ./.github/actions/cache-browser-engine
+
       - name: Verify release versions and branch
         shell: bash
         run: |
@@ -431,6 +433,13 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
           tags: ${{ env.PRECHECK_IMAGE }}
+          cache-from: |
+            type=gha,scope=preflight-release
+            type=gha,scope=preflight-amd64
+            type=gha,scope=preflight-arm64
+            type=gha,scope=preflight-ppc64le
+            type=gha,scope=preflight-s390x
+          cache-to: type=gha,scope=preflight-release,mode=max
           labels: |
             org.opencontainers.image.source=https://github.com/fidencio/krab
             org.opencontainers.image.revision=${{ github.sha }}
@@ -449,6 +458,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
           tags: ${{ env.COLLECTOR_IMAGE }}
+          cache-from: type=gha,scope=collector-release
+          cache-to: type=gha,scope=collector-release,mode=max
           labels: |
             org.opencontainers.image.source=https://github.com/fidencio/krab
             org.opencontainers.image.revision=${{ github.sha }}

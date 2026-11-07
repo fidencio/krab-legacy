@@ -40,6 +40,10 @@ jobs:
       - name: Install shared browser engine toolchain
         run: rustup toolchain install 1.95.0 --profile minimal --target wasm32-unknown-unknown
 
+      - uses: ./source/.github/actions/cache-browser-engine
+        with:
+          source: source
+
       - name: Validate and build development site
         working-directory: source
         run: |

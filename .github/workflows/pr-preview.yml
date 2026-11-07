@@ -19,6 +19,8 @@ jobs:
       - run: npm ci
       - name: Install shared browser engine toolchain
         run: rustup toolchain install 1.95.0 --profile minimal --target wasm32-unknown-unknown
+
+      - uses: ./.github/actions/cache-browser-engine
       - name: Validate generated files
         run: |
           npm run generate

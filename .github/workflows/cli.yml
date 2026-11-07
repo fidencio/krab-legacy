@@ -45,6 +45,18 @@ jobs:
           krab_sysroot="$(rustc +1.95.0 --print sysroot)"
           krab_host="$(rustc +1.95.0 -vV | sed -n 's/^host: //p')"
           echo "${krab_sysroot}/lib/rustlib/${krab_host}/bin" >> "${GITHUB_PATH}"
+      - name: Cache native CLI compilation
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            cli/target
+            core/target
+          key: cli-rust-1.95-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-${{ hashFiles('cli/Cargo.lock', 'core/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            cli-rust-1.95-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-${{ hashFiles('cli/Cargo.lock', 'core/Cargo.lock') }}-
+            cli-rust-1.95-${{ runner.os }}-${{ runner.arch }}-${{ matrix.target }}-
       - name: Check formatting and test CLI
         working-directory: cli
         run: |
