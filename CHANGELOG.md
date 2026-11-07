@@ -2,7 +2,7 @@
 
 All notable changes to KRAB are documented in this file.
 
-## [0.2.10] - Unreleased
+## [0.2.10] - 2026-11-07
 
 - Select NVIDIA CPU TDX and SNP directly in the website, TUI, and CLI. Prepare
   measured CPU profiles automatically in the node installation pipeline.
