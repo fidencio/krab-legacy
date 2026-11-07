@@ -1,0 +1,48 @@
+name: Reproducible CLI
+
+on:
+  pull_request:
+    paths: ['core/**', 'cli/**', 'preflight/**', '.github/workflows/reproducible.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: reproducible-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.95.0 --profile minimal
+      - name: Build twice with independent paths and Cargo homes
+        env:
+          CARGO_INCREMENTAL: '0'
+          CARGO_PROFILE_RELEASE_STRIP: symbols
+        run: |
+          for build in first second-longer-path; do
+            krab_source="$RUNNER_TEMP/$build/source"
+            krab_cargo="$RUNNER_TEMP/$build/cargo-home"
+            mkdir -p "$krab_source" "$krab_cargo"
+            git archive HEAD | tar -x -C "$krab_source"
+            (
+              cd "$krab_source"
+              export CARGO_HOME="$krab_cargo"
+              export RUSTFLAGS="--remap-path-prefix=$krab_source=/usr/src/krab --remap-path-prefix=$krab_cargo=/usr/src/cargo"
+              cargo +1.95.0 build --release --locked --manifest-path cli/Cargo.toml
+            )
+          done
+          krab_first="$RUNNER_TEMP/first/source/cli/target/release/krab"
+          krab_second="$RUNNER_TEMP/second-longer-path/source/cli/target/release/krab"
+          sha256sum "$krab_first" "$krab_second" | tee reproducibility.txt
+          cmp "$krab_first" "$krab_second"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: cli-reproducibility
+          path: reproducibility.txt

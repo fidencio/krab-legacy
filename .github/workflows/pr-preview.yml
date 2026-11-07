@@ -42,3 +42,41 @@ jobs:
           name: pr-preview-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
           path: dist
           if-no-files-found: error
+
+  deployments:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@v5
+      - name: Install native engine toolchain
+        run: rustup toolchain install 1.95.0 --profile minimal
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            cli/target
+          key: pr-deployments-${{ runner.os }}-${{ hashFiles('cli/Cargo.lock', 'core/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: pr-deployments-${{ runner.os }}-${{ hashFiles('cli/Cargo.lock', 'core/Cargo.lock') }}-
+      - name: Build the PR configuration engine and render deployments
+        env:
+          CARGO_PROFILE_DEV_DEBUG: '0'
+          CARGO_INCREMENTAL: '0'
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          cargo +1.95.0 build --locked --manifest-path cli/Cargo.toml
+          python3 scripts/ci-pr-deployments.py --binary cli/target/debug/krab --revision "$SOURCE_REVISION"
+      - uses: actions/upload-artifact@v7
+        id: artifact
+        with:
+          name: pr-deployments-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: dist-deployments
+          if-no-files-found: error
+          retention-days: 14
+      - name: Link the deployment bundle
+        env:
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: echo "[Download the chart, generated values, and rendered deployments]($ARTIFACT_URL)" >> "$GITHUB_STEP_SUMMARY"
