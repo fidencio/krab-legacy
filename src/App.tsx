@@ -2359,7 +2359,7 @@ function App() {
                             />
                             <span>
                               <strong>{runtimeName(shim.id)}</strong>
-                              <small>{runtimeUse(shim.id)}</small>
+                              <small>{runtimeDistributionReason(shim) ?? runtimeUse(shim.id)}</small>
                               <em>
                                 {shim.supportedArches.length === 1
                                   ? `Architecture: ${shim.supportedArches[0]}`
