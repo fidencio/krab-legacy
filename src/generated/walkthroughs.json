@@ -1,7 +1,7 @@
 {
   "tui": {
     "title": "Configure in the TUI",
-    "version": "krab 0.2.8",
+    "version": "krab 0.2.9",
     "duration": 36,
     "steps": [
       {
@@ -48,7 +48,7 @@
   },
   "cli": {
     "title": "Generate values from the CLI",
-    "version": "krab 0.2.8",
+    "version": "krab 0.2.9",
     "duration": 21,
     "steps": [
       {
@@ -71,7 +71,7 @@
   },
   "website": {
     "title": "Navigate the website builder",
-    "version": "KRAB 0.2.8",
+    "version": "KRAB 0.2.9",
     "duration": 35,
     "steps": [
       {

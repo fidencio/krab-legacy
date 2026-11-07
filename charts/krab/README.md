@@ -67,7 +67,7 @@ Install the chart with:
 ```sh
 helm upgrade --install krab \
   oci://ghcr.io/fidencio/krab \
-  --version 0.2.8 \
+  --version 0.2.9 \
   --namespace kata-system \
   --create-namespace \
   --values values.yaml

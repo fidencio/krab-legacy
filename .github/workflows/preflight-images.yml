@@ -1,0 +1,61 @@
+name: Build preflight images
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - preflight/**
+      - Dockerfile.precheck
+      - .dockerignore
+      - .github/workflows/preflight-images.yml
+  push:
+    branches: [main]
+    paths:
+      - preflight/**
+      - Dockerfile.precheck
+      - .dockerignore
+      - .github/workflows/preflight-images.yml
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [amd64, arm64, ppc64le, s390x]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Cross-build the checker image on the native runner CPU
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.precheck
+          platforms: linux/${{ matrix.architecture }}
+          load: true
+          tags: krab-preflight:test
+          cache-from: |
+            type=gha,scope=preflight-${{ matrix.architecture }}
+            type=gha,scope=preflight-release
+          cache-to: type=gha,scope=preflight-${{ matrix.architecture }},mode=max
+      # Execute the target binary, never its compiler, under emulation.
+      - name: Smoke test the target executable and dynamic libraries
+        run: |
+          set -euo pipefail
+          docker run --rm --read-only --platform linux/${{ matrix.architecture }} \
+            --volume /:/host:ro --volume /proc:/host/proc:ro \
+            --volume /sys:/host/sys:ro --volume /dev:/host/dev:ro \
+            krab-preflight:test > report.json
+          node --input-type=module - '${{ matrix.architecture }}' <<'NODE'
+          import assert from 'node:assert/strict'
+          import { readFileSync } from 'node:fs'
+          const report = JSON.parse(readFileSync('report.json', 'utf8'))
+          const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
+          assert.equal(report.node.checkerVersion, pkg.version)
+          assert.equal(report.node.architecture, process.argv[2])
+          assert.equal(report.schemaVersion, 2)
+          NODE

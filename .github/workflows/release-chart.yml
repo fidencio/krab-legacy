@@ -23,18 +23,40 @@ env:
   PRECHECK_CHART_REFERENCE: oci://ghcr.io/fidencio/krab-precheck
 
 jobs:
+  existing_builds:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    outputs:
+      preflight: ${{ steps.existing.outputs.preflight }}
+      cli: ${{ steps.existing.outputs.cli }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Reuse successful builds of the exact release commit
+        id: existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/reuse-release-artifacts.py
+
   preflight_binaries:
+    needs: existing_builds
+    if: needs.existing_builds.outputs.preflight == ''
     uses: ./.github/workflows/preflight-binaries.yml
     permissions:
       contents: read
 
   cli_binaries:
+    needs: existing_builds
+    if: needs.existing_builds.outputs.cli == ''
     uses: ./.github/workflows/cli.yml
     permissions:
       contents: read
 
   release:
-    needs: [preflight_binaries, cli_binaries]
+    needs: [existing_builds, preflight_binaries, cli_binaries]
+    if: >-
+      ${{ !cancelled() && needs.existing_builds.result == 'success' &&
+          (needs.preflight_binaries.result == 'success' || needs.preflight_binaries.result == 'skipped') &&
+          (needs.cli_binaries.result == 'success' || needs.cli_binaries.result == 'skipped') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -44,12 +66,16 @@ jobs:
           pattern: krab-preflight-linux-*
           merge-multiple: true
           path: dist-binaries
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ needs.existing_builds.outputs.preflight || github.run_id }}
 
       - uses: actions/download-artifact@v5
         with:
           pattern: krab-cli-*
           merge-multiple: true
           path: dist-cli
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ needs.existing_builds.outputs.cli || github.run_id }}
 
       - uses: actions/setup-node@v7
         with:
@@ -69,6 +95,8 @@ jobs:
 
       - name: Install shared browser engine toolchain
         run: rustup toolchain install 1.95.0 --profile minimal --target wasm32-unknown-unknown
+
+      - uses: ./.github/actions/cache-browser-engine
 
       - name: Verify release versions and branch
         shell: bash
@@ -368,13 +396,13 @@ jobs:
         run: bash scripts/verify-release-head.sh
 
       - name: Attest KRAB chart SBOM
-        uses: actions/attest@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-path: dist-chart/krab-${{ env.CHART_VERSION }}.tgz
           sbom-path: dist-sbom/krab-${{ env.CHART_VERSION }}.spdx.json
 
       - name: Attest pre-flight chart SBOM
-        uses: actions/attest@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-path: dist-precheck/krab-precheck-${{ env.CHART_VERSION }}.tgz
           sbom-path: dist-sbom/krab-precheck-${{ env.CHART_VERSION }}.spdx.json
@@ -431,6 +459,13 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
           tags: ${{ env.PRECHECK_IMAGE }}
+          cache-from: |
+            type=gha,scope=preflight-release
+            type=gha,scope=preflight-amd64
+            type=gha,scope=preflight-arm64
+            type=gha,scope=preflight-ppc64le
+            type=gha,scope=preflight-s390x
+          cache-to: type=gha,scope=preflight-release,mode=max
           labels: |
             org.opencontainers.image.source=https://github.com/fidencio/krab
             org.opencontainers.image.revision=${{ github.sha }}
@@ -449,6 +484,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
           tags: ${{ env.COLLECTOR_IMAGE }}
+          cache-from: type=gha,scope=collector-release
+          cache-to: type=gha,scope=collector-release,mode=max
           labels: |
             org.opencontainers.image.source=https://github.com/fidencio/krab
             org.opencontainers.image.revision=${{ github.sha }}
@@ -548,7 +585,7 @@ jobs:
         run: bash scripts/verify-release-head.sh
 
       - name: Attest amd64 pre-flight image SBOM
-        uses: actions/attest@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-name: ghcr.io/fidencio/krab-preflight
           subject-digest: ${{ steps.image_sbom.outputs.amd64_digest }}
@@ -556,7 +593,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest arm64 pre-flight image SBOM
-        uses: actions/attest@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-name: ghcr.io/fidencio/krab-preflight
           subject-digest: ${{ steps.image_sbom.outputs.arm64_digest }}
@@ -564,7 +601,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest ppc64le pre-flight image SBOM
-        uses: actions/attest@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-name: ghcr.io/fidencio/krab-preflight
           subject-digest: ${{ steps.image_sbom.outputs.ppc64le_digest }}
@@ -572,7 +609,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest s390x pre-flight image SBOM
-        uses: actions/attest@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-name: ghcr.io/fidencio/krab-preflight
           subject-digest: ${{ steps.image_sbom.outputs.s390x_digest }}
@@ -580,7 +617,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest amd64 collector image SBOM
-        uses: actions/attest@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-name: ghcr.io/fidencio/krab-collector
           subject-digest: ${{ steps.collector_sbom.outputs.amd64_digest }}
@@ -588,7 +625,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest arm64 collector image SBOM
-        uses: actions/attest@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-name: ghcr.io/fidencio/krab-collector
           subject-digest: ${{ steps.collector_sbom.outputs.arm64_digest }}
@@ -596,7 +633,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest ppc64le collector image SBOM
-        uses: actions/attest@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-name: ghcr.io/fidencio/krab-collector
           subject-digest: ${{ steps.collector_sbom.outputs.ppc64le_digest }}
@@ -604,7 +641,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest s390x collector image SBOM
-        uses: actions/attest@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-name: ghcr.io/fidencio/krab-collector
           subject-digest: ${{ steps.collector_sbom.outputs.s390x_digest }}
@@ -643,27 +680,27 @@ jobs:
         run: bash scripts/verify-release-head.sh
 
       - name: Attest chart package
-        uses: actions/attest-build-provenance@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-path: dist-chart/krab-*.tgz
 
       - name: Attest pre-flight chart package
-        uses: actions/attest-build-provenance@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-path: dist-precheck/krab-precheck-*.tgz
 
       - name: Attest release builder
-        uses: actions/attest-build-provenance@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-path: dist-builder/krab-builder-*.tar.gz
 
       - name: Attest standalone checker archives
-        uses: actions/attest-build-provenance@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-path: dist-binaries/*.tar.gz
 
       - name: Attest native CLI archives
-        uses: actions/attest-build-provenance@v4
+        uses: ./.github/actions/attest-retry
         with:
           subject-path: dist-cli/*.tar.gz
 
