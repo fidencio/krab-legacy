@@ -68,8 +68,11 @@ Physical GPU validation remains a separate hardware test.
 
 Merging builds CI artifacts. Publication still requires a new release version
 and the manually dispatched chart release workflow from current `main`.
-That workflow waits for both binary builds, adds their archives to the release
-checksums and build provenance attestations, and attaches them to the release.
+That workflow reuses complete, successful `main` push artifacts for its exact
+commit. If those builds are already running, it waits for them instead of
+starting duplicates. Missing or expired artifact sets fall back to fresh builds.
+It adds the archives to the release checksums and build provenance attestations,
+and attaches them to the release.
 Existing release checks and the guard against publishing an outdated main
 revision remain in effect. Existing published versions are not overwritten or
 retrofitted with binaries.
