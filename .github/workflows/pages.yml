@@ -104,6 +104,8 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          timeout: 1200000
         # deploy-pages#434: bundled @actions/artifact still loads core punycode.
         env:
           NODE_OPTIONS: --no-deprecation
