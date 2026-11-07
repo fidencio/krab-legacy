@@ -252,6 +252,9 @@ cat /var/lib/krab/conformance/latest.json`}</Command>
           “Powered by KRAB” credit.</p>
         <p><a download="krab-profile.json" href={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(cocoProfile, null, 2))}`}>
           <Download size={14} /> Download an example CoCo profile</a></p>
+        <details><summary>View and copy the example profile</summary>
+          <Command>{JSON.stringify(cocoProfile, null, 2)}</Command>
+        </details>
         <ol className="docs-steps">
           <li><strong>Choose your product.</strong> Edit the JSON file’s name, description, logo path,
             runtime and platform lists, feature flags, and native configuration defaults.
@@ -263,6 +266,17 @@ cat /var/lib/krab/conformance/latest.json`}</Command>
           <li><strong>Bundle the matching CLI.</strong> Provide the native archive from the same build
             with the same <code>krab-profile.json</code> beside the executable, or select it explicitly:</li>
         </ol>
+        <h3>Run the example website</h3>
+        <Command>{`git clone https://github.com/fidencio/krab.git
+cd krab
+docker build -f Dockerfile.website -t krab-website .
+docker run --rm -p 8080:80 \\
+  -v "$PWD/examples/product-profiles/coco.json:/usr/share/nginx/html/krab-profile.json:ro" \\
+  -v "$PWD/src/assets/brands/confidential-containers.svg:/usr/share/nginx/html/product-logo.svg:ro" \\
+  krab-website`}</Command>
+        <p>Open <code>http://localhost:8080</code>. Without the profile mount, the container serves
+          the ordinary KRAB builder. The portable static-site artifact can also be served at a subdirectory.</p>
+        <h3>Use the same profile in your terminal</h3>
         <Command>{`krab --profile krab-profile.json init --non-interactive --output krab.yaml
 krab --profile krab-profile.json edit --config krab.yaml
 krab --profile krab-profile.json generate --config krab.yaml --output values.yaml`}</Command>
@@ -270,7 +284,23 @@ krab --profile krab-profile.json generate --config krab.yaml --output values.yam
           Invalid profiles block the builder with an explanation.</p>
         <p>Profiles are available in Next; use matching website and CLI artifacts from the same source revision.
           Previously released 0.2.10 binaries do not include this feature.</p>
-        <p><a href={`${source}/docs/self-host.md`}>Container commands and full profile field reference <ExternalLink size={12} /></a></p>
+        <h3>Choose the available controls</h3>
+        <p><code>available</code> can restrict vendors, runtimes, distributions, architectures, and
+          hardwareFamilies using their existing catalog IDs. Omit a list to keep all its choices;
+          use an empty hardwareFamilies list for a CPU-only product. Discover IDs with
+          <code> krab list catalog --json</code>. Unknown IDs and incompatible defaults are rejected.</p>
+        <table className="docs-shortcuts"><thead><tr><th>Feature flag</th><th>Settings fixed at the product defaults when false</th></tr></thead><tbody>
+          <tr><td><code>advanced</code></td><td>All advanced, runtime, and component settings</td></tr>
+          <tr><td><code>customRuntimes</code></td><td>Custom RuntimeClasses</td></tr>
+          <tr><td><code>continuousConformance</code></td><td>Continuous host conformance</td></tr>
+          <tr><td><code>newNodes</code></td><td>Scheduled enrollment and its cron schedule</td></tr>
+          <tr><td><code>imageOverrides</code></td><td>Component and EROFS utility images</td></tr>
+          <tr><td><code>components</code></td><td>Component installation choices</td></tr>
+          <tr><td><code>helmOverrides</code></td><td>Raw Helm value overrides</td></tr>
+        </tbody></table>
+        <p>Feature flags default to true. A fixed setting can still be enabled by the operator in
+          <code> defaults</code>. Imports use the same validation, and raw Helm overrides cannot
+          bypass restricted features or available choices.</p>
       </section>
 
       <section id="docs/reference">
