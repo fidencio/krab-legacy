@@ -13,7 +13,9 @@ confidence-threshold = 0.8
 
 [bans]
 multiple-versions = "warn"
-wildcards = "deny"
+# Match NVRC: local path crates and revision-pinned Git crates omit registry versions.
+# Builds use committed lockfiles with --locked; unknown sources are denied below.
+wildcards = "allow"
 
 [sources]
 unknown-registry = "deny"
