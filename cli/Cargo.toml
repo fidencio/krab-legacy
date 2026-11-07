@@ -21,9 +21,3 @@ serde_yaml_ng = "0.10"
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "0.38", features = ["event", "termios", "process"] }
-
-# One codegen unit gives the release linker a stable compilation order.
-[profile.release]
-lto = true
-codegen-units = 1
-strip = true

@@ -11,6 +11,7 @@ on:
       - src/generated/catalog.json
       - src/generated/provenance.json
       - scripts/ci/runtime-smoke.py
+      - scripts/build-cli-release.py
       - .github/workflows/runtime-smoke.yml
       - Dockerfile.precheck
       - upstream/**
@@ -24,6 +25,7 @@ on:
       - src/generated/catalog.json
       - src/generated/provenance.json
       - scripts/ci/runtime-smoke.py
+      - scripts/build-cli-release.py
       - .github/workflows/runtime-smoke.yml
       - Dockerfile.precheck
       - upstream/**
@@ -79,7 +81,7 @@ jobs:
             cli-rust-1.95-${{ runner.os }}-${{ runner.arch }}-x86_64-unknown-linux-musl-${{ hashFiles('cli/Cargo.lock', 'core/Cargo.lock') }}-
       - name: Build the current KRAB configuration engine
         run: |
-          cargo +1.95.0 build --release --locked --manifest-path cli/Cargo.toml --target x86_64-unknown-linux-musl
+          python3 scripts/build-cli-release.py --target x86_64-unknown-linux-musl
           mkdir -p smoke-tools
           cp cli/target/x86_64-unknown-linux-musl/release/krab smoke-tools/krab
           smoke-tools/krab --version

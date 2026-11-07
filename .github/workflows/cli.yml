@@ -73,7 +73,7 @@ jobs:
           cargo +1.95.0 fmt --check --manifest-path ../core/Cargo.toml
           cargo +1.95.0 clippy --locked --all-targets --target ${{ matrix.target }} -- -D warnings
           cargo +1.95.0 test --locked --target ${{ matrix.target }}
-          cargo +1.95.0 build --release --locked --target ${{ matrix.target }}
+          python3 ../scripts/build-cli-release.py --target ${{ matrix.target }}
       - name: Check default interactive setup in a terminal
         run: |
           python3 cli/tests/terminal.py cli/target/${{ matrix.target }}/release/krab

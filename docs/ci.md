@@ -6,7 +6,7 @@ Every PR builds a website preview. The bot links it after Pages publishes it. In
 
 The deployment examples are render checks. Actual VM boot is verified by the **Kubernetes runtime smoke tests** workflow, which clones the pinned Kata repository and invokes its Kubernetes setup scripts, installs KRAB, and launches smoke pods. Its per-distribution artifacts contain values, manifests, pod logs, and diagnostics. PR examples retain the chart's published image pins; the smoke tests separately build and import the current PR's helper image into each ephemeral cluster.
 
-The **Native CLI** workflow provides the three platform archives and checksums. It executes the binaries and terminal tests on each supported architecture. **Reproducible CLI** additionally compares two clean Linux builds with different source and Cargo-home paths.
+The **Native CLI** workflow provides the three platform archives and checksums. It executes the binaries and terminal tests on each supported architecture. **Reproducible CLI** additionally compares two clean Linux builds with different source and Cargo-home paths. Both use `scripts/build-cli-release.py`, which creates an isolated virtual workspace so Cargo hashes all local package identities relative to one root. The ordinary independent crate manifests and lockfiles remain the development entry points.
 
 Dependabot checks Rust crates daily and npm, Docker, and Actions weekly, with a seven-day cooldown. Updates use ordinary PR review and CI; automatic merging is not enabled.
 

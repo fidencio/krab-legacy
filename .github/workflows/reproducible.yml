@@ -2,7 +2,7 @@ name: Reproducible CLI
 
 on:
   pull_request:
-    paths: ['core/**', 'cli/**', 'preflight/**', '.github/workflows/reproducible.yml']
+    paths: ['core/**', 'cli/**', 'preflight/**', 'scripts/build-cli-release.py', '.github/workflows/reproducible.yml']
   workflow_dispatch:
 
 permissions:
@@ -39,8 +39,7 @@ jobs:
             (
               cd "$krab_source"
               export CARGO_HOME="$krab_cargo"
-              export RUSTFLAGS="--remap-path-prefix=$krab_source=/usr/src/krab --remap-path-prefix=$krab_cargo=/usr/src/cargo"
-              cargo +1.95.0 build --release --locked --manifest-path cli/Cargo.toml --target x86_64-unknown-linux-musl
+              python3 scripts/build-cli-release.py --target x86_64-unknown-linux-musl
             )
           done
           krab_first="$RUNNER_TEMP/first/source/cli/target/x86_64-unknown-linux-musl/release/krab"
