@@ -2,10 +2,10 @@ name: Rust quality
 
 on:
   pull_request:
-    paths: ['core/**', 'cli/**', 'preflight/**', 'controller/**', 'deny.toml', '.github/workflows/rust-quality.yml']
+    paths: ['core/**', 'cli/**', 'preflight/**', 'deny.toml', '.github/workflows/rust-quality.yml']
   push:
     branches: [main]
-    paths: ['core/**', 'cli/**', 'preflight/**', 'controller/**', 'deny.toml', '.github/workflows/rust-quality.yml']
+    paths: ['core/**', 'cli/**', 'preflight/**', 'deny.toml', '.github/workflows/rust-quality.yml']
   schedule:
     - cron: '23 3 * * *'
   workflow_dispatch:
@@ -30,8 +30,6 @@ jobs:
             toolchain: 1.95.0
           - crate: preflight
             toolchain: 1.95.0
-          - crate: controller
-            toolchain: 1.96.0
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:

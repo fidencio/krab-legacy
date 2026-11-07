@@ -1,6 +1,6 @@
 # CI and PR artifacts
 
-The automation follows [NVIDIA/NVRC](https://github.com/NVIDIA/nvrc), adapted to KRAB's four independent Rust crates and static website.
+The automation follows [NVIDIA/NVRC](https://github.com/NVIDIA/nvrc), adapted to KRAB's three independent Rust crates and static website.
 
 Every PR builds a website preview. The bot links it after Pages publishes it. In the **Build PR preview** run, download `pr-deployments-<PR>-<head SHA>` for the packaged Helm chart, source configurations, generated values, rendered manifests, checksums, and exact build revision. These examples cover the five distributions and five generic amd64 runtimes. Unsupported combinations are recorded with their reason instead of rendered. Review values for your hardware before installing.
 

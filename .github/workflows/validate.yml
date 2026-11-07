@@ -62,7 +62,6 @@ jobs:
         run: |
           helm dependency update charts/krab
           npm run test:helm
-          npm run test:controller:render
 
   preflight:
     runs-on: ubuntu-24.04
@@ -77,31 +76,3 @@ jobs:
         run: |
           cargo +1.95.0 fmt --check
           cargo +1.95.0 test --locked
-
-  controller:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          persist-credentials: false
-      - name: Install controller Rust toolchain
-        run: rustup toolchain install 1.96.0 --profile minimal --component rustfmt --component clippy
-      - name: Check controller
-        working-directory: controller
-        run: |
-          cargo +1.96.0 fmt --check
-          cargo +1.96.0 test --locked
-          cargo +1.96.0 clippy --locked --all-targets -- -D warnings
-      - name: Build controller image
-        run: docker build --file controller/Dockerfile --tag krab-controller:test .
-      - name: Check token-free host identity guard
-        run: |
-          docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
-            --volume /etc/machine-id:/host-machine-id:ro \
-            krab-controller:test check-machine "$(cat /etc/machine-id)"
-          if docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges \
-            --volume /etc/machine-id:/host-machine-id:ro \
-            krab-controller:test check-machine wrong-machine; then
-            echo "ERROR: identity guard accepted a different machine"
-            exit 1
-          fi

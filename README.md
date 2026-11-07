@@ -109,10 +109,6 @@ Regenerate values and rerun pre-flight checks: format 1 values, unversioned
 values, and v1 pre-check reports are not accepted. Archived builders remain
 available for older releases.
 
-An opt-in [experimental Rust controller](controller/README.md) can prepare new
-nodes across the enabled stack using one shared reconcile loop. It is separate
-from the published chart workflow and currently intended for fresh test clusters.
-
 Install the published pre-check chart to check every Linux node in the cluster:
 
 ```sh
