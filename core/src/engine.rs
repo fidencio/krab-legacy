@@ -8,12 +8,20 @@ pub fn starter(catalog: &Value, vendor_id: &str, distribution: &str, arch: &str)
     let shim = shims.iter().find(|s| {
         config::items(&s["supportedArches"]).contains(&json!(arch)) &&
             if vendor_id == "custom" { s["id"] == "qemu-runtime-rs" } else { s["userSelectable"] == true || config::items(&vendor["hardwareFamilies"]).is_empty() }
-    }).ok_or("No starter runtime for this vendor/architecture; use 'krab list runtimes --json' to construct a configuration")?;
+    }).or_else(|| shims.iter().find(|s| config::items(&s["supportedArches"]).contains(&json!(arch)))).ok_or("No starter runtime for this vendor/architecture; use 'krab list runtimes --json' to construct a configuration")?;
     let config: Config = serde_json::from_value(json!({
         "apiVersion": "krab/v1alpha1", "vendor": vendor_id, "distribution": distribution,
         "architectures": [arch], "runtimes": [shim["id"]]
     }))
     .map_err(|e| e.to_string())?;
+    let mut config = config;
+    if catalog["product"]["defaults"].is_object() {
+        let mut value = serde_json::to_value(&config).map_err(|e| e.to_string())?;
+        for field in ["advanced", "runtime", "components", "release", "namespace"] {
+            value[field] = catalog["product"]["defaults"][field].clone();
+        }
+        config = serde_json::from_value(value).map_err(|e| e.to_string())?;
+    }
     values::build(&config, catalog)?;
     Ok(config)
 }
@@ -61,6 +69,14 @@ pub fn request(source: &str) -> Result<Value> {
         )?)
         .map_err(|e| e.to_string()),
         "catalog" => Ok(embedded),
+        "product" => crate::product::apply(catalog, &request["data"]),
+        "normalizeProduct" => {
+            let config: Config =
+                serde_json::from_value(request["config"].clone()).map_err(|e| e.to_string())?;
+            let config = crate::product::normalize(&config, catalog)?;
+            config.validate(catalog)?;
+            serde_json::to_value(config).map_err(|e| e.to_string())
+        }
         "defaults" => website_defaults(),
         "schema" => {
             config::validate_schema(

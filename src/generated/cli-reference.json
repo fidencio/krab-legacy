@@ -1,36 +1,36 @@
 {
   "version": "0.2.10",
-  "help": "Build and deploy Kata reference architectures\n\nUsage: krab [COMMAND]\n\nCommands:\n  edit         Edit an existing configuration using its current settings as defaults\n  init         Create a configuration through interactive setup\n  list         Discover pinned choices; JSON retains complete catalog metadata\n  validate     Validate a configuration and its generated Helm values offline\n  generate     Generate chart-versioned Helm values; stdout by default\n  install      Show a Helm deployment plan; --execute applies it to the named context\n  precheck     Run local host probes or remote node pre-checks; use 'precheck --help' for options\n  conformance  Evaluate cluster host prerequisites; use 'conformance --help' for options\n  completions  Generate shell completions\n  help         Print this message or the help of the given subcommand(s)\n\nOptions:\n  -h, --help     Print help\n  -V, --version  Print version",
+  "help": "Build and deploy Kata reference architectures\n\nUsage: krab [OPTIONS] [COMMAND]\n\nCommands:\n  edit         Edit an existing configuration using its current settings as defaults\n  init         Create a configuration through interactive setup\n  list         Discover pinned choices; JSON retains complete catalog metadata\n  validate     Validate a configuration and its generated Helm values offline\n  generate     Generate chart-versioned Helm values; stdout by default\n  install      Show a Helm deployment plan; --execute applies it to the named context\n  precheck     Run local host probes or remote node pre-checks; use 'precheck --help' for options\n  conformance  Evaluate cluster host prerequisites; use 'conformance --help' for options\n  completions  Generate shell completions\n  help         Print this message or the help of the given subcommand(s)\n\nOptions:\n      --profile <PROFILE>  Apply a product profile to available choices, defaults, and advanced features\n  -h, --help               Print help\n  -V, --version            Print version",
   "commands": [
     {
       "name": "edit",
       "about": "Edit an existing configuration using its current settings as defaults",
-      "help": "Edit an existing configuration using its current settings as defaults\n\nUsage: krab edit [OPTIONS]\n\nOptions:\n      --config <CONFIG>  [default: krab.yaml]\n  -o, --output <OUTPUT>  Save a separate copy (defaults to the source configuration)\n      --force            Replace a different existing output file after confirmation\n      --interactive      Prompt even when stdin is redirected\n      --advanced         Go directly to advanced settings, keeping the current basic selections\n  -h, --help             Print help"
+      "help": "Edit an existing configuration using its current settings as defaults\n\nUsage: krab edit [OPTIONS]\n\nOptions:\n      --config <CONFIG>    [default: krab.yaml]\n      --profile <PROFILE>  Apply a product profile to available choices, defaults, and advanced features\n  -o, --output <OUTPUT>    Save a separate copy (defaults to the source configuration)\n      --force              Replace a different existing output file after confirmation\n      --interactive        Prompt even when stdin is redirected\n      --advanced           Go directly to advanced settings, keeping the current basic selections\n  -h, --help               Print help"
     },
     {
       "name": "init",
       "about": "Create a configuration through interactive setup",
-      "help": "Create a configuration through interactive setup\n\nUsage: krab init [OPTIONS]\n\nOptions:\n      --vendor <VENDOR>              [default: custom]\n      --distribution <DISTRIBUTION>  [default: kubeadm]\n      --architecture <ARCHITECTURE>  [default: amd64]\n      --runtime <RUNTIMES>           Select pinned runtime IDs directly (repeat or separate with commas)\n      --continuous-conformance       Install and manage continuous host conformance with the deployment\n      --output <OUTPUT>              [default: krab.yaml]\n      --force                        \n      --non-interactive              Use starter defaults and flags without prompting (for scripts)\n      --interactive                  Prompt even when stdin is redirected\n      --advanced                     Go directly to advanced settings using the starter configuration\n  -h, --help                         Print help"
+      "help": "Create a configuration through interactive setup\n\nUsage: krab init [OPTIONS]\n\nOptions:\n      --profile <PROFILE>            Apply a product profile to available choices, defaults, and advanced features\n      --vendor <VENDOR>              \n      --distribution <DISTRIBUTION>  \n      --architecture <ARCHITECTURE>  \n      --runtime <RUNTIMES>           Select pinned runtime IDs directly (repeat or separate with commas)\n      --continuous-conformance       Install and manage continuous host conformance with the deployment\n      --output <OUTPUT>              [default: krab.yaml]\n      --force                        \n      --non-interactive              Use starter defaults and flags without prompting (for scripts)\n      --interactive                  Prompt even when stdin is redirected\n      --advanced                     Go directly to advanced settings using the starter configuration\n  -h, --help                         Print help"
     },
     {
       "name": "list",
       "about": "Discover pinned choices; JSON retains complete catalog metadata",
-      "help": "Discover pinned choices; JSON retains complete catalog metadata\n\nUsage: krab list [OPTIONS] <RESOURCE>\n\nArguments:\n  <RESOURCE>  [possible values: vendors, distributions, runtimes, hardware, catalog]\n\nOptions:\n      --vendor <VENDOR>  \n      --json             \n  -h, --help             Print help"
+      "help": "Discover pinned choices; JSON retains complete catalog metadata\n\nUsage: krab list [OPTIONS] <RESOURCE>\n\nArguments:\n  <RESOURCE>  [possible values: vendors, distributions, runtimes, hardware, catalog]\n\nOptions:\n      --profile <PROFILE>  Apply a product profile to available choices, defaults, and advanced features\n      --vendor <VENDOR>    \n      --json               \n  -h, --help               Print help"
     },
     {
       "name": "validate",
       "about": "Validate a configuration and its generated Helm values offline",
-      "help": "Validate a configuration and its generated Helm values offline\n\nUsage: krab validate [OPTIONS]\n\nOptions:\n      --config <CONFIG>  [default: krab.yaml]\n      --json             \n  -h, --help             Print help"
+      "help": "Validate a configuration and its generated Helm values offline\n\nUsage: krab validate [OPTIONS]\n\nOptions:\n      --config <CONFIG>    [default: krab.yaml]\n      --profile <PROFILE>  Apply a product profile to available choices, defaults, and advanced features\n      --json               \n  -h, --help               Print help"
     },
     {
       "name": "generate",
       "about": "Generate chart-versioned Helm values; stdout by default",
-      "help": "Generate chart-versioned Helm values; stdout by default\n\nUsage: krab generate [OPTIONS]\n\nOptions:\n      --config <CONFIG>  [default: krab.yaml]\n  -o, --output <OUTPUT>  \n      --force            \n      --json             Emit Helm-compatible JSON instead of commented YAML\n  -h, --help             Print help"
+      "help": "Generate chart-versioned Helm values; stdout by default\n\nUsage: krab generate [OPTIONS]\n\nOptions:\n      --config <CONFIG>    [default: krab.yaml]\n      --profile <PROFILE>  Apply a product profile to available choices, defaults, and advanced features\n  -o, --output <OUTPUT>    \n      --force              \n      --json               Emit Helm-compatible JSON instead of commented YAML\n  -h, --help               Print help"
     },
     {
       "name": "install",
       "about": "Show a Helm deployment plan; --execute applies it to the named context",
-      "help": "Show a Helm deployment plan; --execute applies it to the named context\n\nUsage: krab install [OPTIONS] --context <CONTEXT>\n\nOptions:\n      --config <CONFIG>    [default: krab.yaml]\n      --context <CONTEXT>  \n      --execute            \n  -h, --help               Print help"
+      "help": "Show a Helm deployment plan; --execute applies it to the named context\n\nUsage: krab install [OPTIONS] --context <CONTEXT>\n\nOptions:\n      --config <CONFIG>    [default: krab.yaml]\n      --profile <PROFILE>  Apply a product profile to available choices, defaults, and advanced features\n      --context <CONTEXT>  \n      --execute            \n  -h, --help               Print help"
     },
     {
       "name": "precheck",
@@ -45,7 +45,7 @@
     {
       "name": "completions",
       "about": "Generate shell completions",
-      "help": "Generate shell completions\n\nUsage: krab completions <SHELL>\n\nArguments:\n  <SHELL>  [possible values: bash, elvish, fish, powershell, zsh]\n\nOptions:\n  -h, --help  Print help"
+      "help": "Generate shell completions\n\nUsage: krab completions [OPTIONS] <SHELL>\n\nArguments:\n  <SHELL>  [possible values: bash, elvish, fish, powershell, zsh]\n\nOptions:\n      --profile <PROFILE>  Apply a product profile to available choices, defaults, and advanced features\n  -h, --help               Print help"
     }
   ]
 }

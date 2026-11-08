@@ -134,8 +134,22 @@ pub(super) struct App<'a> {
 
 impl<'a> App<'a> {
     fn advanced_fields(&self) -> Vec<(&'static str, Field)> {
+        if !krab_core::product::enabled(self.catalog, "advanced") {
+            return Vec::new();
+        }
         ADVANCED
             .iter()
+            .filter(|(_, field)| match field {
+                Field::Component(_) => krab_core::product::enabled(self.catalog, "components"),
+                Field::Conformance => {
+                    krab_core::product::enabled(self.catalog, "continuousConformance")
+                }
+                Field::Overrides => {
+                    krab_core::product::enabled(self.catalog, "helmOverrides")
+                        && self.catalog["product"]["restricted"] != true
+                }
+                _ => true,
+            })
             .filter(|(_, field)| {
                 !matches!(field, Field::Runtime("erofsDiskSize"))
                     || self.config.runtime.erofs_mode == "disk"
@@ -175,7 +189,7 @@ impl<'a> App<'a> {
             logo: None,
             pending_check: None,
         };
-        if defaults.advanced {
+        if defaults.advanced && !app.advanced_fields().is_empty() {
             app.screen = Screen::Advanced;
         } else if defaults.existing.is_none() {
             app.setup = Some(0);
@@ -833,7 +847,14 @@ impl<'a> App<'a> {
                         5 => self.open(Field::Runtimes)?,
                         6 => self.open(Field::Families)?,
                         7 => self.open(Field::Selinux)?,
-                        8 => self.screen = Screen::Advanced,
+                        8 => {
+                            if self.advanced_fields().is_empty() {
+                                self.message =
+                                    "Advanced settings are fixed by this product profile".into();
+                            } else {
+                                self.screen = Screen::Advanced;
+                            }
+                        }
                         9 => self.open(Field::Release)?,
                         10 => self.open(Field::Namespace)?,
                         11 => {
@@ -864,6 +885,10 @@ impl<'a> App<'a> {
             Screen::Advanced => {
                 self.screen = Screen::Advanced;
                 let fields = self.advanced_fields();
+                if fields.is_empty() {
+                    self.screen = Screen::Overview;
+                    return Ok(None);
+                }
                 self.advanced_selected = self.advanced_selected.min(fields.len() - 1);
                 match key.code {
                     KeyCode::Down | KeyCode::Char('j') => {
@@ -1158,7 +1183,10 @@ fn render(frame: &mut Frame<'_>, app: &App<'_>) {
     frame.render_widget(
         Paragraph::new(Line::from(vec![
             Span::styled(
-                " KRAB ",
+                format!(
+                    " {} ",
+                    app.catalog["product"]["name"].as_str().unwrap_or("KRAB")
+                ),
                 Style::default()
                     .fg(Color::Rgb(252, 94, 51))
                     .add_modifier(Modifier::BOLD),
@@ -1378,11 +1406,19 @@ fn render(frame: &mut Frame<'_>, app: &App<'_>) {
     frame.render_widget(
         Paragraph::new(vec![
             Line::from(controls(&app.screen)),
-            Line::from(if matches!(app.screen, Screen::Input(_)) {
-                "[F1] Help · [Esc] Cancel"
-            } else {
-                "[?] Help · [Esc] Back/cancel"
-            }),
+            Line::from(format!(
+                "{}{}",
+                if matches!(app.screen, Screen::Input(_)) {
+                    "[F1] Help · [Esc] Cancel"
+                } else {
+                    "[?] Help · [Esc] Back/cancel"
+                },
+                if app.catalog["product"].is_object() {
+                    " · Powered by KRAB"
+                } else {
+                    ""
+                }
+            )),
             Line::styled(app.message.as_str(), Style::default().fg(Color::Yellow)),
         ])
         .wrap(Wrap { trim: false }),
@@ -1523,6 +1559,34 @@ mod tests {
             .iter()
             .map(|cell| cell.symbol())
             .collect()
+    }
+
+    #[test]
+    fn product_branding_and_disabled_advanced_controls_share_the_engine_profile() {
+        let source: Value =
+            serde_json::from_str(include_str!("../../examples/product-profiles/coco.json"))
+                .unwrap();
+        let catalog = krab_core::product::apply(&crate::config::catalog(), &source).unwrap();
+        let config: Config =
+            serde_json::from_value(catalog["product"]["defaults"].clone()).unwrap();
+        let app = App::new(&catalog, defaults(&config)).unwrap();
+        assert!(output(&app, 160, 40).contains("CoCo deployment builder"));
+        assert!(output(&app, 160, 40).contains("Powered by KRAB"));
+        assert!(!app
+            .advanced_fields()
+            .iter()
+            .any(|(_, f)| matches!(f, Field::Component(_) | Field::Overrides)));
+        assert!(app
+            .advanced_fields()
+            .iter()
+            .any(|(_, f)| matches!(f, Field::Conformance)));
+        let mut source = source;
+        source["features"]["advanced"] = json!(false);
+        let catalog = krab_core::product::apply(&crate::config::catalog(), &source).unwrap();
+        let mut app = App::new(&catalog, defaults(&config)).unwrap();
+        app.screen = Screen::Advanced;
+        key(&mut app, KeyCode::Down);
+        assert!(matches!(app.screen, Screen::Overview));
     }
 
     #[test]

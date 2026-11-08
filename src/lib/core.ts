@@ -34,6 +34,22 @@ export function coreRequest<T>(operation: string, config?: unknown, catalog?: un
   }
 }
 
-export const coreCatalog = coreRequest<unknown>('catalog')
+const embeddedCatalog = coreRequest<unknown>('catalog')
+export let productError: string | null = null
+async function configuredCatalog(): Promise<unknown> {
+  if (typeof window === 'undefined') return embeddedCatalog
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}krab-profile.json`, {
+      headers: { Accept: 'application/json' }, cache: 'no-store',
+    })
+    if (response.status === 404) return embeddedCatalog
+    if (!response.ok) throw new Error(`Product profile could not be loaded (${response.status}).`)
+    return coreRequest('product', undefined, embeddedCatalog, await response.json())
+  } catch (error) {
+    productError = error instanceof Error ? error.message : 'Invalid product profile.'
+    return embeddedCatalog
+  }
+}
+export const coreCatalog = await configuredCatalog()
 export const coreDefaults = coreRequest<unknown>('defaults')
 export const coreVersion = coreRequest<string>('version')

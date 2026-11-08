@@ -1,0 +1,25 @@
+# Build once; configure each static installation with krab-profile.json at runtime.
+FROM rust:1.95.0-slim-bookworm@sha256:d7482085ff5b415f84dba5647ae71606650bdef00db7aeb69f4b3d170c3e4082 AS engine
+RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN rustup target add wasm32-unknown-unknown
+WORKDIR /app
+COPY package.json ./
+COPY core ./core
+COPY src/generated/catalog.json ./src/generated/catalog.json
+COPY charts/krab/values.schema.json ./charts/krab/values.schema.json
+COPY upstream/erofs-utils-image.lock.json ./upstream/erofs-utils-image.lock.json
+COPY scripts/build-core.py ./scripts/build-core.py
+RUN python3 scripts/build-core.py
+
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS website
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+COPY --from=engine /app/src/generated/engine ./src/generated/engine
+COPY --from=engine /app/src/generated/core-build.json ./src/generated/core-build.json
+RUN BASE_PATH=./ npm run build
+
+FROM nginx:stable-alpine@sha256:583b7f2fce1cdb8da5ad5c39ebd3c33b98b87d493190e548bdee1fa8c619c311
+COPY --from=website /app/dist /usr/share/nginx/html
+EXPOSE 80

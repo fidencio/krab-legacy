@@ -30,7 +30,7 @@ impl Document {
         }
         let path = fs::canonicalize(path).map_err(|e| format!("{}: {e}", path.display()))?;
         let source = fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-        let config = Config::parse(&source)?;
+        let config = krab_core::product::normalize(&Config::parse(&source)?, catalog)?;
         values::build(&config, catalog)?;
         Ok(Self {
             config,

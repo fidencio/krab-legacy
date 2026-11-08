@@ -16,7 +16,8 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react'
-import { coreCatalog } from './lib/core'
+import { coreCatalog, coreRequest } from './lib/core'
+import { productDefaults, productFeature, websiteConfiguration } from './lib/product'
 import packageData from '../package.json'
 import krabLogoDark from './assets/brands/krab-kata-hybrid.png'
 import krabLogoLight from './assets/brands/krab-kata-hybrid-light.png'
@@ -53,6 +54,8 @@ import {
 import './App.css'
 
 const catalog = coreCatalog as ExplorerCatalog
+const productInitial = productDefaults(catalog)
+const feature = (name: string) => productFeature(catalog, name)
 const siteBase = import.meta.env.BASE_URL.split('/').filter(Boolean)[0]
 const siteRootUrl = `/${siteBase ? `${siteBase}/` : ''}`
 const releasesUrl = `${siteRootUrl}releases/`
@@ -330,7 +333,7 @@ function App() {
     return preferredTheme
   })
   const theme = themePreference === 'system' ? systemTheme : themePreference
-  const [step, setStep] = useState<1 | 2>(1)
+  const [step, setStep] = useState<1 | 2>(catalog.product && catalog.vendors.length === 1 ? 2 : 1)
   const familyArchitectureReason = (family: VendorCatalog['hardwareFamilies'][number]) =>
     selectedVendorId === 'custom' &&
     !(cluster.architectures ?? []).some((architecture) => family.supportedArches.includes(architecture))
@@ -342,7 +345,7 @@ function App() {
             (cluster.architectures ?? []).includes(architecture)))
       ? 'No compatible GPU RuntimeClass for the selected architecture'
       : null
-  const [selectedVendorId, setSelectedVendorId] = useState(catalog.vendors[0]?.id ?? '')
+  const [selectedVendorId, setSelectedVendorId] = useState(productInitial?.vendorId ?? catalog.vendors[0]?.id ?? '')
   const selectedVendor = catalog.vendors.find(({ id }) => id === selectedVendorId) ??
     catalog.vendors[0]
   const runtimeOnlyVendor = isRuntimeOnlyVendor(selectedVendor)
@@ -352,22 +355,22 @@ function App() {
     text: string
   } | null>(null)
   const [selections, setSelections] = useState<FamilySelections>(() =>
-    initialSelections(selectedVendor),
+    productInitial?.selections ?? initialSelections(selectedVendor),
   )
-  const [cluster, setCluster] = useState<ClusterConfiguration>({
+  const [cluster, setCluster] = useState<ClusterConfiguration>(productInitial?.cluster ?? {
     distributionId: null,
     selinuxEnabled: false,
     architectures: [],
   })
-  const [deploymentName, setDeploymentName] = useState('')
-  const [runtime, setRuntime] = useState<RuntimeConfiguration>({
+  const [deploymentName, setDeploymentName] = useState(productInitial?.deploymentName ?? '')
+  const [runtime, setRuntime] = useState<RuntimeConfiguration>(productInitial?.runtime ?? {
     selectedShimIds: [],
     runtimeHttpsProxy: '',
     runtimeNoProxy: '',
     nvidiaDcgmEnabled: false,
   })
   const [advanced, setAdvanced] = useState<AdvancedConfiguration>(
-    createAdvancedConfiguration,
+    () => productInitial?.advanced ?? createAdvancedConfiguration(),
   )
   const installErofsUtils = advanced.installErofsUtils
   useEffect(() => {
@@ -407,11 +410,12 @@ function App() {
     return () => colorScheme.removeEventListener('change', followSystemTheme)
   }, [])
   const artifacts = useMemo(() => {
-    const config = buildCliConfiguration(selectedVendor, selections, cluster, runtime, advanced)
+    const release = normalizeDeploymentName(deploymentName, catalog.plannedArchitecture.charts.krab.releaseName)
+    const config = buildCliConfiguration(selectedVendor, selections, cluster, runtime, advanced, release, catalog.plannedArchitecture.namespace)
     const validationError = validateCliConfiguration(config, catalog)
     let values = ''
     try {
-      values = buildValuesBundle(catalog, selectedVendor, selections, cluster, runtime, advanced)
+      values = buildValuesBundle(catalog, selectedVendor, selections, cluster, runtime, advanced, release)
     } catch { /* Incomplete drafts remain editable; validation explains the issue. */ }
     return { values, validationError, install: buildInstallScript(catalog, deploymentName) }
   }, [advanced, cluster, deploymentName, runtime, selectedVendor, selections])
@@ -556,9 +560,9 @@ function App() {
   const selectVendor = (vendor: VendorCatalog) => {
     setImportMessage(null)
     setSelectedVendorId(vendor.id)
-    setSelections(initialSelections(vendor))
-    setCluster({ distributionId: null, selinuxEnabled: false, architectures: [] })
-    setRuntime({
+    setSelections(productInitial?.vendorId === vendor.id ? structuredClone(productInitial.selections) : initialSelections(vendor))
+    setCluster(productInitial?.cluster ?? { distributionId: null, selinuxEnabled: false, architectures: [] })
+    setRuntime(productInitial?.vendorId === vendor.id ? structuredClone(productInitial.runtime) : {
       selectedShimIds:
         isRuntimeOnlyVendor(vendor) && vendor.id !== 'custom'
           ? vendor.runtime.shims.map(({ id }) => id)
@@ -567,7 +571,7 @@ function App() {
       runtimeNoProxy: '',
       nvidiaDcgmEnabled: false,
     })
-    setAdvanced(createAdvancedConfiguration())
+    setAdvanced(productInitial ? structuredClone(productInitial.advanced) : createAdvancedConfiguration())
     setStep(2)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -575,7 +579,17 @@ function App() {
   const loadValuesFile = async (file: File | undefined) => {
     if (!file) return
     try {
-      const imported = importValuesBundle(catalog, await file.text(), file.name)
+      let imported = importValuesBundle(catalog, await file.text(), file.name)
+      if (catalog.product) {
+        const vendor = catalog.vendors.find(({ id }) => id === imported.vendorId)
+        if (!vendor) throw new Error('This deployment path is unavailable in this product.')
+        const config = buildCliConfiguration(vendor, imported.selections, imported.cluster,
+          imported.runtime, imported.advanced,
+          normalizeDeploymentName(imported.deploymentName, catalog.plannedArchitecture.charts.krab.releaseName),
+          catalog.plannedArchitecture.namespace)
+        const normalized = coreRequest<ReturnType<typeof buildCliConfiguration>>('normalizeProduct', config, catalog)
+        imported = { ...imported, ...websiteConfiguration(normalized) }
+      }
       setSelectedVendorId(imported.vendorId)
       setSelections(imported.selections)
       setCluster(imported.cluster)
@@ -814,7 +828,7 @@ function App() {
   const downloadValues = (native = false) => {
     if (!valuesReady) return
     const blob = new Blob([native
-      ? JSON.stringify(buildCliConfiguration(selectedVendor, selections, cluster, runtime, advanced, effectiveDeploymentName), null, 2) + '\n'
+      ? JSON.stringify(buildCliConfiguration(selectedVendor, selections, cluster, runtime, advanced, effectiveDeploymentName, catalog.plannedArchitecture.namespace), null, 2) + '\n'
       : artifacts.values], {
       type: 'application/yaml',
     })
@@ -848,16 +862,17 @@ function App() {
       </aside>
     )}
     <div className="app-shell">
-      <header className="site-header">
-        <button className="brand" onClick={restart} aria-label="Kata Reference Architecture Builder home">
+      <header className={`site-header${catalog.product ? ' product-header' : ''}`}>
+        <button className="brand" onClick={restart} aria-label={`${catalog.product?.name ?? 'Kata Reference Architecture Builder'} home`}>
+          {catalog.product?.logo && <img className="product-mark" src={catalog.product.logo} alt="" />}
           <span className="brand-copy">
-            <strong>KRAB</strong>
+            <strong>{catalog.product?.name ?? 'KRAB'}</strong>
             <span className="brand-separator">·</span>
-            <small>Kata Reference Architecture Builder</small>
+            <small>{catalog.product?.description || 'Kata Reference Architecture Builder'}</small>
           </span>
         </button>
 
-        <details className="release-picker" ref={releasePickerRef}>
+        <details hidden={!!catalog.product} className="release-picker" ref={releasePickerRef}>
           <summary>{isDevelopmentBuild ? 'Next' : packageData.version} <ChevronDown size={12} aria-hidden="true" /></summary>
           <div className="release-picker-menu">
             {selectableReleases.map(({ version, path }) => (
@@ -911,7 +926,7 @@ function App() {
             </div>
             <img
               className="intro-logo"
-              src={theme === 'dark' ? krabLogoDark : krabLogoLight}
+              src={catalog.product?.logo || (theme === 'dark' ? krabLogoDark : krabLogoLight)}
               alt=""
               aria-hidden="true"
             />
@@ -960,7 +975,7 @@ function App() {
                 ))}
               </section>
 
-              <CliGuide />
+              <CliGuide product={!!catalog.product} />
 
               <IommufdSetupNote reports={[]} />
 
@@ -1108,7 +1123,7 @@ function App() {
               {selectedVendor.id === 'custom' && <section className="custom-architectures" aria-label="Target architectures">
                 <header><h2>Target architectures</h2><p>Every selected architecture must have a runtime.</p></header>
                 <div className="custom-architecture-options">
-                  {['amd64', 'arm64', 'ppc64le', 's390x'].map((architecture) => <label key={architecture}>
+                  {['amd64', 'arm64', 'ppc64le', 's390x'].filter((architecture) => !catalog.product || selectedVendor.runtime.shims.some(shim => shim.supportedArches.includes(architecture))).map((architecture) => <label key={architecture}>
                     <input type="checkbox" checked={customArchitectures.includes(architecture)} onChange={() =>
                       toggleCustomArchitecture(architecture)
                     } />
@@ -1161,7 +1176,7 @@ function App() {
                   <label className="cluster-field">
                     <span className="field-label">
                       Deployment name
-                      <small>Optional · defaults to krab</small>
+                      <small>Optional · defaults to {catalog.plannedArchitecture.charts.krab.releaseName}</small>
                     </span>
                     <input
                       type="text"
@@ -1207,7 +1222,7 @@ function App() {
                 </div>
               )}
 
-              <details className="advanced-config">
+              <details className="advanced-config" hidden={!feature('advanced')}>
                 <summary>
                   <span>
                     <strong>Advanced deployment configuration</strong>
@@ -1347,7 +1362,7 @@ function App() {
                       </div>
                     </section>
                   )}
-                  <section className="advanced-group">
+                  <section className="advanced-group" hidden={!feature('customRuntimes')}>
                     <header>
                       <span>Kata runtime · Custom RuntimeClasses</span>
                       <strong>Custom runtimes</strong>
@@ -1681,7 +1696,7 @@ function App() {
                           </span>
                         </label>
                         {installErofsUtils && (
-                          <label className="erofs-image-field">
+                          <label className="erofs-image-field" hidden={!feature('imageOverrides')}>
                             <span>Utility image override</span>
                             <input
                               type="text"
@@ -1999,7 +2014,7 @@ function App() {
                     )}
                   </section>
 
-                  <section className="advanced-group continuous-conformance">
+                  <section className="advanced-group continuous-conformance" hidden={!feature('continuousConformance')}>
                     <header>
                       <span>Deployment health</span>
                       <strong>Continuous conformance</strong>
@@ -2017,7 +2032,7 @@ function App() {
                       <span className="toggle-track" aria-hidden="true"><span /></span>
                     </label>
                   </section>
-                  <section className="advanced-group scheduled-reconcile">
+                  <section className="advanced-group scheduled-reconcile" hidden={!feature('newNodes')}>
                     <header>
                       <span>Kata runtime installer · New nodes</span>
                       <strong>Scheduled reconcile CronJob</strong>
@@ -2086,7 +2101,7 @@ function App() {
                     </p>
                   </section>
 
-                  <section className="advanced-group">
+                  <section className="advanced-group" hidden={!feature('imageOverrides')}>
                     <header>
                       <span>All deployed components</span>
                       <strong>Image pulls</strong>
@@ -2627,7 +2642,7 @@ function App() {
                   )}
                 </section>
 
-                  <details className="architecture-details" open>
+                  <details className="architecture-details" hidden={!feature('components')} open>
                     <summary>
                       <span>
                         <strong>How KRAB assembles this architecture</strong>
@@ -2851,7 +2866,7 @@ function App() {
         </section>
         </>}
       </main>
-
+      <footer className="product-attribution"><a href="https://github.com/fidencio/krab" target="_blank" rel="noreferrer">Powered by KRAB</a><span>{packageData.version}</span></footer>
     </div>
     </>
   )
