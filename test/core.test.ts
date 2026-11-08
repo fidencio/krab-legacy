@@ -17,6 +17,11 @@ test('browser tool downloads recover through the release API and fail closed on 
   assert.equal(result.status, 0, result.stdout + result.stderr)
 })
 
+test('SBOM tool downloads require the pinned version and an intact regular executable', () => {
+  const result = spawnSync('python3', [resolve(import.meta.dirname, 'syft-downloads.py')], { encoding: 'utf8' })
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+})
+
 test('browser embeds the exact native catalog and version, and Rust validates its configuration', () => {
   assert.equal(coreVersion, pkg.version)
   assert.deepEqual(coreCatalog, catalog)
