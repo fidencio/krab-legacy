@@ -53,7 +53,7 @@ jobs:
       CARGO_PROFILE_RELEASE_STRIP: symbols
       RUSTFLAGS: -C target-feature=+crt-static --remap-path-prefix=${{ github.workspace }}=/usr/src/krab
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Install the pinned Rust toolchain and bundled linker
@@ -65,7 +65,7 @@ jobs:
           test -x "${krab_linker_dir}/rust-lld"
           echo "${krab_linker_dir}" >> "${GITHUB_PATH}"
       - name: Cache standalone checker compilation
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/registry
