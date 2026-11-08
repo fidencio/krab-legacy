@@ -3,9 +3,28 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { coreCatalog, coreRequest } from '../src/lib/core.ts'
 import { buildCliConfiguration, importValuesBundle, type ExplorerCatalog } from '../src/lib/artifacts.ts'
-import { productDefaults, productFeature, websiteConfiguration } from '../src/lib/product.ts'
+import { productDefaults, productFeature, productTheme, websiteConfiguration } from '../src/lib/product.ts'
 
 const profile = JSON.parse(readFileSync(new URL('../examples/product-profiles/coco.json', import.meta.url), 'utf8'))
+
+test('profile palettes switch independently and choose readable accent button text', () => {
+  const plain = { ...profile }
+  delete plain.theme
+  const baseline = coreRequest<ExplorerCatalog>('product', undefined, coreCatalog, plain)
+  assert.deepEqual(productTheme(baseline, 'light'), {})
+  const catalog = coreRequest<ExplorerCatalog>('product', undefined, coreCatalog, {
+    ...plain, theme: { light: { pageBackground: '#fff', accent: '#ffff00' }, dark: { accent: '#003366' } },
+  })
+  assert.equal(productTheme(catalog, 'light')['--product-page-background'], '#fff')
+  assert.equal(productTheme(catalog, 'light')['--product-on-accent'], '#000000')
+  assert.equal(productTheme(catalog, 'dark')['--product-page-background'], undefined)
+  assert.equal(productTheme(catalog, 'dark')['--product-on-accent'], '#ffffff')
+  assert.deepEqual(coreRequest('generate', catalog.product!.defaults, catalog),
+    coreRequest('generate', baseline.product!.defaults, baseline))
+  assert.throws(() => coreRequest('product', undefined, coreCatalog, {
+    ...plain, theme: { light: { text: 'url(https://example.com)' } },
+  }), /opaque hex colour/)
+})
 
 test('product defaults round-trip through website controls with native component semantics', () => {
   const catalog = coreRequest<ExplorerCatalog>('product', undefined, coreCatalog, profile)
