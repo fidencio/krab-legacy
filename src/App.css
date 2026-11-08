@@ -4695,6 +4695,7 @@ nav a:hover,
 
 .product-header { grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; padding-block: 8px; }
 .product-header .brand { min-width: 0; width: 100%; text-align: left; }
-.product-header .brand-copy { flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
-.product-header .brand-copy strong { letter-spacing: .02em; overflow-wrap: anywhere; }
-.product-header .brand-copy small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.product-header .brand-copy { flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; min-height: 0; }
+.product-header .brand-separator { display: none; }
+.product-header .brand-copy strong { font-size: 17px; font-weight: 700; letter-spacing: 0; overflow-wrap: anywhere; }
+.product-header .brand-copy small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; font-weight: 400; letter-spacing: 0; }

@@ -566,7 +566,13 @@ function App() {
     setImportMessage(null)
     setSelectedVendorId(vendor.id)
     setSelections(productInitial?.vendorId === vendor.id ? structuredClone(productInitial.selections) : initialSelections(vendor))
-    setCluster(productInitial?.cluster ?? { distributionId: null, selinuxEnabled: false, architectures: [] })
+    const productCluster = productInitial ? structuredClone(productInitial.cluster) : null
+    if (productCluster) {
+      const supportedArchitectures = [...new Set(vendor.runtime.shims.flatMap(shim => shim.supportedArches))]
+      productCluster.architectures = productCluster.architectures.filter(architecture => supportedArchitectures.includes(architecture))
+      if (productCluster.architectures.length === 0) productCluster.architectures = supportedArchitectures
+    }
+    setCluster(productCluster ?? { distributionId: null, selinuxEnabled: false, architectures: [] })
     setRuntime(productInitial?.vendorId === vendor.id ? structuredClone(productInitial.runtime) : {
       selectedShimIds:
         isRuntimeOnlyVendor(vendor) && vendor.id !== 'custom'
@@ -703,7 +709,7 @@ function App() {
       selectedVendor.hardwareFamilies.map((family) => [family.id,
         family.supportedArches.some((arch) =>
           nextArchitectures.includes(arch) && gpuArchitectures.has(arch))
-          ? current[family.id]
+          ? current[family.id] ?? { enabled: false, modeId: null, cpuTeeIds: [] }
           : { enabled: false, modeId: null, cpuTeeIds: [] },
       ]),
     ))
@@ -2289,7 +2295,9 @@ function App() {
                       </p>
                     </header>
                   )}
-                  {selectedVendor.id === 'nvidia' && (
+                  {selectedVendor.id === 'nvidia' && selectedVendor.runtime.shims.some(
+                    ({ userSelectable, selectionGroup }) => userSelectable && selectionGroup === 'cpu',
+                  ) && (
                     <section className="local-runtime-selection nvidia-runtime-selection">
                       <header>
                         <div>
