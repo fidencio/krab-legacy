@@ -218,6 +218,8 @@ export type ExplorerCatalog = {
     name: string
     description: string
     logo: string
+    theme?: Partial<Record<'light' | 'dark', Partial<Record<
+      'pageBackground' | 'panelBackground' | 'text' | 'mutedText' | 'accent' | 'border', string>>>>
     features: Record<string, boolean>
     defaults: ReturnType<typeof buildCliConfiguration>
     applyDefaults: boolean
