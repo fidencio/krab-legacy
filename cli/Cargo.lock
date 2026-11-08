@@ -875,7 +875,7 @@ dependencies = [
  "krab-preflight",
  "ratatui",
  "ratatui-image",
- "rustix 0.38.44",
+ "rustix 1.1.5",
  "serde",
  "serde_json",
  "serde_yaml_ng",
