@@ -318,9 +318,9 @@ nav a:hover {
   gap: 8px;
   margin: 0 0 14px;
   padding: 10px 12px;
-  border: 1px solid rgba(241, 91, 62, 0.35);
+  border: 1px solid color-mix(in srgb, var(--product-accent, #f15b3e) 35%, transparent);
   border-radius: 7px;
-  background: rgba(241, 91, 62, 0.07);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 7%, transparent);
   color: #b8c9bf;
   font-size: 11px;
 }
@@ -408,11 +408,11 @@ button.vendor-card {
 
 .vendor-card.selected {
   padding: 24px 26px;
-  border: 1px solid rgba(241, 91, 62, 0.6);
+  border: 1px solid color-mix(in srgb, var(--product-accent, #f15b3e) 60%, transparent);
   background:
-    radial-gradient(circle at 95% 5%, rgba(241, 91, 62, 0.11), transparent 45%),
+    radial-gradient(circle at 95% 5%, color-mix(in srgb, var(--product-accent, #f15b3e) 11%, transparent), transparent 45%),
     #182237;
-  box-shadow: inset 0 0 0 1px rgba(241, 91, 62, 0.06);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--product-accent, #f15b3e) 6%, transparent);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
@@ -743,7 +743,7 @@ button.vendor-card {
 
 .hardware-card.selected {
   border-color: var(--kata-primary);
-  background: linear-gradient(145deg, rgba(241, 91, 62, 0.09), #161f31 55%);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--product-accent, #f15b3e) 9%, transparent), #161f31 55%);
 }
 
 .hardware-icon {
@@ -1063,11 +1063,11 @@ button.vendor-card {
 }
 
 .architecture-node.krab-chart {
-  border-color: rgba(241, 91, 62, 0.35);
+  border-color: color-mix(in srgb, var(--product-accent, #f15b3e) 35%, transparent);
 }
 
 .architecture-node.required {
-  border-color: rgba(241, 91, 62, 0.42);
+  border-color: color-mix(in srgb, var(--product-accent, #f15b3e) 42%, transparent);
 }
 
 .architecture-node.required small {
@@ -1075,8 +1075,8 @@ button.vendor-card {
 }
 
 .architecture-node.vendor-specific {
-  border-color: rgba(241, 91, 62, 0.62);
-  background: rgba(241, 91, 62, 0.055);
+  border-color: color-mix(in srgb, var(--product-accent, #f15b3e) 62%, transparent);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 5.5%, transparent);
 }
 
 .architecture-node.vendor-specific small {
@@ -1192,10 +1192,10 @@ button.vendor-card {
   order: 7;
   margin-bottom: 24px;
   padding: 21px 22px;
-  border: 1px solid rgba(241, 91, 62, 0.52);
+  border: 1px solid color-mix(in srgb, var(--product-accent, #f15b3e) 52%, transparent);
   border-radius: 11px;
   background:
-    radial-gradient(circle at 100% 0, rgba(241, 91, 62, 0.1), transparent 50%),
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--product-accent, #f15b3e) 10%, transparent), transparent 50%),
     #1b2639;
 }
 
@@ -1505,7 +1505,7 @@ button.vendor-card {
 }
 
 .local-runtime-selection .local-runtime-grid label:has(input:checked) {
-  background: rgba(241, 91, 62, 0.055);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 5.5%, transparent);
 }
 
 .local-runtime-selection .local-runtime-grid input {
@@ -1538,7 +1538,7 @@ button.vendor-card {
 }
 
 .nvidia-profiles .profile-card:has(.profile-family-checkbox input:checked) > summary {
-  background: rgba(241, 91, 62, 0.055);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 5.5%, transparent);
 }
 
 .nvidia-profiles .profile-options {
@@ -1626,7 +1626,7 @@ button.vendor-card {
 .local-runtime-selection > header > em {
   flex: 0 0 auto;
   padding: 4px 7px;
-  border: 1px solid rgba(241, 91, 62, 0.4);
+  border: 1px solid color-mix(in srgb, var(--product-accent, #f15b3e) 40%, transparent);
   border-radius: 4px;
   color: var(--kata-primary-bright);
   font-size: 8px;
@@ -1659,8 +1659,8 @@ button.vendor-card {
 }
 
 .local-runtime-grid label:has(input:checked) {
-  border-color: rgba(241, 91, 62, 0.58);
-  background: rgba(241, 91, 62, 0.075);
+  border-color: color-mix(in srgb, var(--product-accent, #f15b3e) 58%, transparent);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 7.5%, transparent);
 }
 
 .local-runtime-grid input {
@@ -1695,10 +1695,10 @@ button.vendor-card {
 
 .cluster-config {
   padding: 16px 18px;
-  border: 1px solid rgba(241, 91, 62, 0.42);
+  border: 1px solid color-mix(in srgb, var(--product-accent, #f15b3e) 42%, transparent);
   border-radius: 12px;
   background:
-    radial-gradient(circle at 100% 0, rgba(241, 91, 62, 0.07), transparent 45%),
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--product-accent, #f15b3e) 7%, transparent), transparent 45%),
     #1b2639;
 }
 
@@ -1780,8 +1780,8 @@ button.vendor-card {
 }
 
 .runtime-prerequisite.managed {
-  border-color: rgba(241, 91, 62, 0.42);
-  background: rgba(241, 91, 62, 0.055);
+  border-color: color-mix(in srgb, var(--product-accent, #f15b3e) 42%, transparent);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 5.5%, transparent);
   color: var(--kata-primary-bright);
 }
 
@@ -2462,7 +2462,7 @@ button.vendor-card {
 }
 
 .cluster-config:not(.incomplete) > header em {
-  border-color: rgba(241, 91, 62, 0.4);
+  border-color: color-mix(in srgb, var(--product-accent, #f15b3e) 40%, transparent);
   color: var(--kata-primary-bright);
 }
 
@@ -2601,7 +2601,7 @@ button.vendor-card {
 
 .distribution-select-options button.selected {
   color: var(--kata-primary-bright);
-  background: rgba(241, 91, 62, 0.1);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 10%, transparent);
 }
 
 .info-popover {
@@ -2708,7 +2708,7 @@ button.vendor-card {
 
 .selinux-toggle input:checked + .toggle-track {
   border-color: var(--kata-primary);
-  background: rgba(241, 91, 62, 0.2);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 20%, transparent);
 }
 
 .selinux-toggle input:checked + .toggle-track > span {
@@ -2755,7 +2755,7 @@ button.vendor-card {
 }
 
 .profile-card[open] {
-  border-color: rgba(241, 91, 62, 0.46);
+  border-color: color-mix(in srgb, var(--product-accent, #f15b3e) 46%, transparent);
 }
 
 .profile-card.pending,
@@ -2789,7 +2789,7 @@ button.vendor-card {
 
 .profile-summary-status span {
   padding: 4px 7px;
-  border: 1px solid rgba(241, 91, 62, 0.42);
+  border: 1px solid color-mix(in srgb, var(--product-accent, #f15b3e) 42%, transparent);
   border-radius: 4px;
   color: var(--kata-primary-bright);
   font: 700 9px ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -2966,9 +2966,9 @@ button.vendor-card {
 .cpu-tee-selection {
   margin: 0 0 0 28px;
   padding: 15px 16px 16px;
-  border: 1px solid rgba(241, 91, 62, 0.3);
+  border: 1px solid color-mix(in srgb, var(--product-accent, #f15b3e) 30%, transparent);
   border-radius: 8px;
-  background: rgba(241, 91, 62, 0.04);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 4%, transparent);
 }
 
 .cpu-tee-selection.needs-selection {
@@ -3019,8 +3019,8 @@ button.vendor-card {
 }
 
 .cpu-tee-selection label:has(input:checked) {
-  border-color: rgba(241, 91, 62, 0.55);
-  background: rgba(241, 91, 62, 0.07);
+  border-color: color-mix(in srgb, var(--product-accent, #f15b3e) 55%, transparent);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 7%, transparent);
 }
 
 .cpu-tee-selection input {
@@ -3049,10 +3049,10 @@ button.vendor-card {
 .runtime-install-summary {
   order: 5;
   padding: 24px;
-  border: 1px solid rgba(241, 91, 62, 0.42);
+  border: 1px solid color-mix(in srgb, var(--product-accent, #f15b3e) 42%, transparent);
   border-radius: 12px;
   background:
-    radial-gradient(circle at 100% 0, rgba(241, 91, 62, 0.08), transparent 38%),
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--product-accent, #f15b3e) 8%, transparent), transparent 38%),
     #1b2639;
 }
 
@@ -3099,7 +3099,7 @@ button.vendor-card {
 .runtime-install-summary > header > strong {
   flex: 0 0 auto;
   padding: 5px 8px;
-  border: 1px solid rgba(241, 91, 62, 0.42);
+  border: 1px solid color-mix(in srgb, var(--product-accent, #f15b3e) 42%, transparent);
   border-radius: 5px;
   color: var(--kata-primary-bright);
   font-size: 9px;
@@ -3154,7 +3154,7 @@ button.vendor-card {
 .runtime-summary-grid li {
   padding: 4px 6px;
   border-radius: 4px;
-  background: rgba(241, 91, 62, 0.09);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 9%, transparent);
   color: #c7d2cc;
   font-size: 8px;
 }
@@ -3232,7 +3232,7 @@ button.vendor-card {
 
 .code-tabs button.active {
   border-color: var(--kata-orange);
-  background: rgba(241, 91, 62, 0.08);
+  background: color-mix(in srgb, var(--product-accent, #f15b3e) 8%, transparent);
   color: #e9e9e6;
 }
 
@@ -3341,7 +3341,7 @@ button.vendor-card {
 
 /* Kata Containers visual language: flat white surfaces, navy type, orange action. */
 .app-shell {
-  color: #333;
+  color: var(--product-text, #333);
 }
 
 .intro {
@@ -3349,19 +3349,19 @@ button.vendor-card {
 }
 
 .site-header {
-  border-color: #d5d5d5;
-  background: #fff;
+  border-color: var(--product-border, #d5d5d5);
+  background: var(--product-page-background, #fff);
 }
 
 nav,
 nav a,
 .back-link {
-  color: #2a394e;
+  color: var(--product-text, #2a394e);
 }
 
 nav a:hover,
 .back-link:hover {
-  color: #f15b3e;
+  color: var(--product-accent, #f15b3e);
 }
 
 .intro::after {
@@ -3398,7 +3398,7 @@ nav a:hover,
 .builder-section-title,
 .code-heading > div > span,
 .values-blocked strong {
-  color: #2a394e;
+  color: var(--product-text, #2a394e);
   font-family: 'Roboto', sans-serif;
 }
 
@@ -3425,12 +3425,12 @@ nav a:hover,
 .runtime-summary-grid article > p,
 .code-heading small,
 .values-blocked p {
-  color: #6b6b6b;
+  color: var(--product-muted-text, #6b6b6b);
 }
 
 .card-link,
 .external-platform-card > p a {
-  color: #f15b3e;
+  color: var(--product-accent, #f15b3e);
 }
 
 .panel,
@@ -3445,20 +3445,20 @@ nav a:hover,
 .profile-card,
 .runtime-install-summary,
 .values-blocked {
-  border-color: #d5d5d5;
+  border-color: var(--product-border, #d5d5d5);
   border-radius: 4px;
-  background: #fff;
+  background: var(--product-panel-background, #fff);
   box-shadow: none;
 }
 
 .vendor-card.selected,
 .external-platform-card {
-  background: #fff;
+  background: var(--product-panel-background, #fff);
 }
 
 .vendor-card.selected:hover,
 .hardware-card:hover {
-  border-color: #f15b3e;
+  border-color: var(--product-accent, #f15b3e);
   transform: none;
   box-shadow: none;
 }
@@ -3468,13 +3468,13 @@ nav a:hover,
 .local-runtime-grid label:has(input:checked),
 .mode-option:has(input:checked),
 .cpu-tee-selection label:has(input:checked) {
-  background: #fff7f5;
+  background: var(--product-selection, #fff7f5);
 }
 
 .profile-card.pending,
 .profile-card.pending[open] {
-  border-color: #d5d5d5;
-  background: #f6f7f8;
+  border-color: var(--product-border, #d5d5d5);
+  background: var(--product-panel-background, #f6f7f8);
 }
 
 .profile-card.pending > summary {
@@ -3486,7 +3486,7 @@ nav a:hover,
 .nvidia-profiles .profile-card.pending,
 .nvidia-profiles .profile-card.pending[open] {
   border-width: 0 0 1px;
-  border-color: #d5d5d5;
+  border-color: var(--product-border, #d5d5d5);
   border-radius: 0;
   background: transparent;
 }
@@ -3501,13 +3501,13 @@ nav a:hover,
 
 .profile-card.pending h2,
 .profile-card.pending summary strong {
-  color: #667386;
+  color: var(--product-muted-text, #667386);
 }
 
 .profile-summary-status span.pending {
-  border-color: #9b9b9b;
-  color: #5f6977;
-  background: #fff;
+  border-color: var(--product-border, #9b9b9b);
+  color: var(--product-muted-text, #5f6977);
+  background: var(--product-panel-background, #fff);
 }
 
 .managed-platform-guidance,
@@ -3515,7 +3515,7 @@ nav a:hover,
 .advanced-group,
 .architecture-details summary,
 .profile-card > summary {
-  border-color: #d5d5d5;
+  border-color: var(--product-border, #d5d5d5);
 }
 
 .import-values-button,
@@ -3542,9 +3542,9 @@ nav a:hover,
 .runtime-summary-empty,
 .code-tabs button,
 .values-blocked {
-  border-color: #d5d5d5;
-  background: #f6f7f8;
-  color: #333;
+  border-color: var(--product-border, #d5d5d5);
+  background: var(--product-panel-background, #f6f7f8);
+  color: var(--product-text, #333);
   box-shadow: none;
 }
 
@@ -3554,10 +3554,10 @@ nav a:hover,
 .cluster-fields select,
 .cluster-fields input,
 .distribution-select-trigger {
-  border-color: #9b9b9b;
+  border-color: var(--product-border, #9b9b9b);
   border-radius: 4px;
-  background: #fff;
-  color: #222;
+  background: var(--product-panel-background, #fff);
+  color: var(--product-text, #222);
 }
 
 .advanced-config input:focus,
@@ -3565,36 +3565,36 @@ nav a:hover,
 .advanced-config textarea:focus,
 .cluster-fields input:focus,
 .distribution-select.open .distribution-select-trigger {
-  border-color: #f15b3e;
-  box-shadow: 0 0 0 2px rgba(241, 91, 62, 0.14);
+  border-color: var(--product-accent, #f15b3e);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--product-accent, #f15b3e) 14%, transparent);
 }
 
 .distribution-select-trigger .placeholder {
-  color: #6b7280;
+  color: var(--product-muted-text, #6b7280);
 }
 
 .distribution-select-trigger svg {
-  color: #687482;
+  color: var(--product-muted-text, #687482);
 }
 
 .distribution-select-options {
-  border-color: #b8b8b8;
-  background: #fff;
+  border-color: var(--product-border, #b8b8b8);
+  background: var(--product-panel-background, #fff);
   box-shadow: 0 14px 30px rgba(42, 57, 78, 0.16);
 }
 
 .distribution-select-options button {
-  color: #2a394e;
+  color: var(--product-text, #2a394e);
 }
 
 .distribution-select-options button:hover,
 .distribution-select-options button:focus-visible {
-  background: #f2f3f4;
+  background: var(--product-panel-background, #f2f3f4);
 }
 
 .distribution-select-options button.selected {
-  color: #d9472c;
-  background: #fff7f5;
+  color: var(--product-accent, #d9472c);
+  background: var(--product-selection, #fff7f5);
 }
 
 .cluster-field,
@@ -3602,7 +3602,7 @@ nav a:hover,
 .advanced-field-grid label > span,
 .image-overrides > span,
 .scheduled-reconcile-schedule > span {
-  color: #4f5966;
+  color: var(--product-muted-text, #4f5966);
 }
 
 .field-label {
@@ -3610,15 +3610,15 @@ nav a:hover,
 }
 
 .field-label small {
-  color: #6b7280;
+  color: var(--product-muted-text, #6b7280);
 }
 
 .shim-drop-in > span strong {
-  color: #2a394e;
+  color: var(--product-text, #2a394e);
 }
 
 .shim-drop-in > span small {
-  color: #667386;
+  color: var(--product-muted-text, #667386);
 }
 
 .capabilities span,
@@ -3633,33 +3633,33 @@ nav a:hover,
 .primary-button,
 .copy-artifact-button,
 .code-actions .primary-button {
-  background: #f15b3e;
-  color: #fff;
+  background: var(--product-accent, #f15b3e);
+  color: var(--product-on-accent, #fff);
 }
 
 .download-artifact-button,
 .artifact-actions .copy-artifact-button {
   border: 1px solid #2a394e;
-  background: #fff;
-  color: #2a394e;
+  background: var(--product-panel-background, #fff);
+  color: var(--product-text, #2a394e);
 }
 
 .download-artifact-button:hover:not(:disabled),
 .artifact-actions .copy-artifact-button:hover:not(:disabled) {
-  border-color: #f15b3e;
-  color: #f15b3e;
+  border-color: var(--product-accent, #f15b3e);
+  color: var(--product-accent, #f15b3e);
 }
 
 .import-values-button:hover {
-  border-color: #f15b3e;
-  background: #fff7f5;
-  color: #f15b3e;
+  border-color: var(--product-accent, #f15b3e);
+  background: var(--product-selection, #fff7f5);
+  color: var(--product-accent, #f15b3e);
 }
 
 .import-values-message {
   border-color: #f0a08f;
-  background: #fff7f5;
-  color: #2a394e;
+  background: var(--product-selection, #fff7f5);
+  color: var(--product-text, #2a394e);
 }
 
 .import-values-message.error,
@@ -3671,18 +3671,18 @@ nav a:hover,
 .code-preview {
   border-color: #282828;
   border-radius: 4px;
-  background: #282828;
+  background: var(--product-panel-background, #282828);
 }
 
 .install-command code,
 .code-preview code {
-  color: #fff;
+  color: var(--product-text, #fff);
 }
 
 .code-tabs button.active {
-  border-color: #f15b3e;
-  background: #fff7f5;
-  color: #2a394e;
+  border-color: var(--product-accent, #f15b3e);
+  background: var(--product-selection, #fff7f5);
+  color: var(--product-text, #2a394e);
 }
 
 .toggle-track {
@@ -3695,11 +3695,11 @@ nav a:hover,
 }
 
 .selinux-toggle input:checked + .toggle-track {
-  background: #f15b3e;
+  background: var(--product-accent, #f15b3e);
 }
 
 .selinux-toggle input:checked + .toggle-track > span {
-  background: #fff;
+  background: var(--product-panel-background, #fff);
 }
 
 .attestation-guidance {
@@ -3711,19 +3711,19 @@ nav a:hover,
 
 .attestation-guidance h2,
 .attestation-references strong {
-  color: #2a394e;
+  color: var(--product-text, #2a394e);
 }
 
 .attestation-guidance-copy > p,
 .attestation-references span,
 .attestation-references code {
-  color: #5d6875;
+  color: var(--product-muted-text, #5d6875);
 }
 
 .attestation-references a,
 .attestation-references a:hover {
   border-radius: 2px;
-  background: #fff;
+  background: var(--product-panel-background, #fff);
 }
 
 .local-runtime-grid strong,
@@ -3733,7 +3733,7 @@ nav a:hover,
 .debug-group > div > strong,
 .component-toggle-group > div > strong,
 .scheduled-reconcile-toggle strong {
-  color: #2a394e;
+  color: var(--product-text, #2a394e);
 }
 
 .local-runtime-grid small,
@@ -3745,39 +3745,39 @@ nav a:hover,
 .debug-group > div > small,
 .component-toggle-group > div > small,
 .scheduled-reconcile-toggle small {
-  color: #5f6977;
+  color: var(--product-muted-text, #5f6977);
 }
 
 .runtime-install-summary header p code {
-  color: #2a394e;
+  color: var(--product-text, #2a394e);
 }
 
 .runtime-summary-grid li {
   border: 1px solid #ead1cb;
-  background: #fff7f5;
-  color: #4f5966;
+  background: var(--product-selection, #fff7f5);
+  color: var(--product-muted-text, #4f5966);
 }
 
 .scheduled-reconcile-note {
-  border-left-color: #f15b3e;
+  border-left-color: var(--product-accent, #f15b3e);
   color: #5f4d49;
 }
 
 .scheduled-reconcile-note strong,
 .scheduled-reconcile-note svg {
-  color: #d9472c;
+  color: var(--product-accent, #d9472c);
 }
 
 .runtime-prerequisite,
 .runtime-prerequisite.managed {
   border-color: #f0a08f;
-  background: #fff7f5;
-  color: #d9472c;
+  background: var(--product-selection, #fff7f5);
+  color: var(--product-accent, #d9472c);
 }
 
 .runtime-prerequisite strong,
 .runtime-prerequisite.managed strong {
-  color: #2a394e;
+  color: var(--product-text, #2a394e);
 }
 
 .runtime-prerequisite p,
@@ -3825,7 +3825,7 @@ nav a:hover,
 }
 
 .platform-group > header > span {
-  color: #f15b3e;
+  color: var(--product-accent, #f15b3e);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -3834,7 +3834,7 @@ nav a:hover,
 
 .platform-group > header > p {
   margin: 0;
-  color: #6b6b6b;
+  color: var(--product-muted-text, #6b6b6b);
   font-size: 13px;
 }
 
@@ -3853,14 +3853,14 @@ nav a:hover,
   border: 0;
   border-bottom: 1px solid #d5d5d5;
   background: transparent;
-  color: #333;
+  color: var(--product-text, #333);
   text-align: left;
   cursor: pointer;
   transition: background-color 140ms ease;
 }
 
 .platform-row:hover {
-  background: #fff7f5;
+  background: var(--product-selection, #fff7f5);
 }
 
 .platform-row-brand {
@@ -3879,7 +3879,7 @@ nav a:hover,
 }
 
 .platform-row-brand strong {
-  color: #2a394e;
+  color: var(--product-text, #2a394e);
   font-size: 17px;
 }
 
@@ -3903,14 +3903,14 @@ nav a:hover,
 }
 
 .platform-row-description {
-  color: #4f5966;
+  color: var(--product-muted-text, #4f5966);
   font-size: 13px;
   line-height: 1.45;
 }
 
 .platform-row-capabilities,
 .managed-platform-meta {
-  color: #667386;
+  color: var(--product-muted-text, #667386);
   font-size: 11px;
   font-weight: 600;
   line-height: 1.45;
@@ -3921,7 +3921,7 @@ nav a:hover,
   align-items: center;
   justify-content: flex-end;
   gap: 7px;
-  color: #f15b3e;
+  color: var(--product-accent, #f15b3e);
   font-size: 12px;
   font-weight: 700;
 }
@@ -3969,7 +3969,7 @@ nav a:hover,
 }
 
 .managed-platform-brand small {
-  color: #667386;
+  color: var(--product-muted-text, #667386);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -3977,13 +3977,13 @@ nav a:hover,
 }
 
 .managed-platform-brand strong {
-  color: #2a394e;
+  color: var(--product-text, #2a394e);
   font-size: 14px;
 }
 
 .managed-platform-row > p {
   margin: 0;
-  color: #4f5966;
+  color: var(--product-muted-text, #4f5966);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -3992,7 +3992,7 @@ nav a:hover,
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
-  color: #f15b3e;
+  color: var(--product-accent, #f15b3e);
   font-weight: 700;
   text-underline-offset: 3px;
 }
@@ -4004,34 +4004,34 @@ nav a:hover,
 }
 
 :root[data-theme='dark'] .app-shell {
-  color: #e8edf4;
+  color: var(--product-text, #e8edf4);
 }
 
 :root[data-theme='dark'] .site-header {
-  border-color: #2c3a4d;
-  background: #0b1220;
+  border-color: var(--product-border, #2c3a4d);
+  background: var(--product-page-background, #0b1220);
 }
 
 :root[data-theme='dark'] nav,
 :root[data-theme='dark'] nav a,
 :root[data-theme='dark'] .back-link {
-  color: #c1cad7;
+  color: var(--product-text, #c1cad7);
 }
 
 :root[data-theme='dark'] nav a:hover,
 :root[data-theme='dark'] .back-link:hover {
-  color: #ff765c;
+  color: var(--product-accent, #ff765c);
 }
 
 :root[data-theme='dark'] .theme-toggle {
-  border-color: #3b4a5f;
-  background: #111b2b;
-  color: #dce3ec;
+  border-color: var(--product-border, #3b4a5f);
+  background: var(--product-panel-background, #111b2b);
+  color: var(--product-text, #dce3ec);
 }
 
 :root[data-theme='dark'] .theme-toggle:hover {
-  border-color: #f15b3e;
-  color: #ff765c;
+  border-color: var(--product-accent, #f15b3e);
+  color: var(--product-accent, #ff765c);
 }
 
 :root[data-theme='dark'] .intro h1,
@@ -4071,7 +4071,7 @@ nav a:hover,
 :root[data-theme='dark'] .debug-group > div > strong,
 :root[data-theme='dark'] .component-toggle-group > div > strong,
 :root[data-theme='dark'] .scheduled-reconcile-toggle strong {
-  color: #eef2f7;
+  color: var(--product-text, #eef2f7);
 }
 
 :root[data-theme='dark'] .panel-heading p,
@@ -4106,7 +4106,7 @@ nav a:hover,
 :root[data-theme='dark'] .debug-group > div > small,
 :root[data-theme='dark'] .component-toggle-group > div > small,
 :root[data-theme='dark'] .scheduled-reconcile-toggle small {
-  color: #a8b3c2;
+  color: var(--product-muted-text, #a8b3c2);
 }
 
 :root[data-theme='dark'] .panel,
@@ -4121,8 +4121,8 @@ nav a:hover,
 :root[data-theme='dark'] .profile-card,
 :root[data-theme='dark'] .runtime-install-summary,
 :root[data-theme='dark'] .values-blocked {
-  border-color: #334155;
-  background: #111b2b;
+  border-color: var(--product-border, #334155);
+  background: var(--product-panel-background, #111b2b);
   box-shadow: none;
 }
 
@@ -4130,20 +4130,20 @@ nav a:hover,
 :root[data-theme='dark'] .nvidia-profiles .profile-card[open],
 :root[data-theme='dark'] .nvidia-profiles .profile-card.pending,
 :root[data-theme='dark'] .nvidia-profiles .profile-card.pending[open] {
-  border-color: #334155;
+  border-color: var(--product-border, #334155);
   background: transparent;
 }
 
 :root[data-theme='dark'] .profile-card.pending,
 :root[data-theme='dark'] .profile-card.pending[open] {
-  border-color: #334155;
-  background: #0f1827;
+  border-color: var(--product-border, #334155);
+  background: var(--product-panel-background, #0f1827);
 }
 
 :root[data-theme='dark'] .profile-card.pending h2,
 :root[data-theme='dark'] .profile-card.pending summary strong,
 :root[data-theme='dark'] .profile-summary-status span.pending {
-  color: #aab5c3;
+  color: var(--product-muted-text, #aab5c3);
 }
 
 :root[data-theme='dark'] .profile-summary-status span.pending {
@@ -4160,7 +4160,7 @@ nav a:hover,
 :root[data-theme='dark'] .platform-row,
 :root[data-theme='dark'] .managed-platform-list,
 :root[data-theme='dark'] .managed-platform-row {
-  border-color: #2c3a4d;
+  border-color: var(--product-border, #2c3a4d);
 }
 
 :root[data-theme='dark'] .import-values-button,
@@ -4185,9 +4185,9 @@ nav a:hover,
 :root[data-theme='dark'] .runtime-summary-grid article,
 :root[data-theme='dark'] .runtime-summary-empty,
 :root[data-theme='dark'] .code-tabs button {
-  border-color: #3a485b;
-  background: #162235;
-  color: #dce3ec;
+  border-color: var(--product-border, #3a485b);
+  background: var(--product-panel-background, #162235);
+  color: var(--product-text, #dce3ec);
 }
 
 :root[data-theme='dark'] .advanced-config input,
@@ -4195,9 +4195,9 @@ nav a:hover,
 :root[data-theme='dark'] .advanced-config textarea,
 :root[data-theme='dark'] .cluster-fields input,
 :root[data-theme='dark'] .distribution-select-trigger {
-  border-color: #46556a;
-  background: #0d1625;
-  color: #edf1f6;
+  border-color: var(--product-border, #46556a);
+  background: var(--product-panel-background, #0d1625);
+  color: var(--product-text, #edf1f6);
 }
 
 :root[data-theme='dark'] .distribution-select-trigger .placeholder,
@@ -4206,22 +4206,22 @@ nav a:hover,
 :root[data-theme='dark'] .platform-row-capabilities,
 :root[data-theme='dark'] .managed-platform-meta,
 :root[data-theme='dark'] .managed-platform-brand small {
-  color: #8f9bad;
+  color: var(--product-muted-text, #8f9bad);
 }
 
 :root[data-theme='dark'] .distribution-select-options {
-  border-color: #46556a;
-  background: #111b2b;
+  border-color: var(--product-border, #46556a);
+  background: var(--product-panel-background, #111b2b);
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.42);
 }
 
 :root[data-theme='dark'] .distribution-select-options button {
-  color: #e5eaf1;
+  color: var(--product-text, #e5eaf1);
 }
 
 :root[data-theme='dark'] .distribution-select-options button:hover,
 :root[data-theme='dark'] .distribution-select-options button:focus-visible {
-  background: #1d2a3d;
+  background: var(--product-panel-background, #1d2a3d);
 }
 
 :root[data-theme='dark'] .distribution-select-options button.selected,
@@ -4231,12 +4231,12 @@ nav a:hover,
 :root[data-theme='dark'] .mode-option:has(input:checked),
 :root[data-theme='dark'] .cpu-tee-selection label:has(input:checked),
 :root[data-theme='dark'] .platform-row:hover {
-  color: #ff8a70;
-  background: #251b22;
+  color: var(--product-accent, #ff8a70);
+  background: var(--product-selection, #251b22);
 }
 
 :root[data-theme='dark'] .platform-row {
-  color: #e8edf4;
+  color: var(--product-text, #e8edf4);
 }
 
 :root[data-theme='dark'] .cluster-field,
@@ -4244,28 +4244,28 @@ nav a:hover,
 :root[data-theme='dark'] .advanced-field-grid label > span,
 :root[data-theme='dark'] .image-overrides > span,
 :root[data-theme='dark'] .scheduled-reconcile-schedule > span {
-  color: #c3ccd8;
+  color: var(--product-text, #c3ccd8);
 }
 
 :root[data-theme='dark'] .download-artifact-button,
 :root[data-theme='dark'] .artifact-actions .copy-artifact-button {
-  border-color: #69778a;
+  border-color: var(--product-border, #69778a);
   background: transparent;
-  color: #e1e7ef;
+  color: var(--product-text, #e1e7ef);
 }
 
 :root[data-theme='dark'] .import-values-button:hover,
 :root[data-theme='dark'] .code-tabs button.active {
-  border-color: #f15b3e;
-  background: #251b22;
-  color: #ff8a70;
+  border-color: var(--product-accent, #f15b3e);
+  background: var(--product-selection, #251b22);
+  color: var(--product-accent, #ff8a70);
 }
 
 :root[data-theme='dark'] .import-values-message,
 :root[data-theme='dark'] .runtime-prerequisite,
 :root[data-theme='dark'] .runtime-prerequisite.managed {
   border-color: #9b4a3b;
-  background: #251b22;
+  background: var(--product-selection, #251b22);
   color: #f1b2a5;
 }
 
@@ -4276,8 +4276,8 @@ nav a:hover,
 
 :root[data-theme='dark'] .install-command,
 :root[data-theme='dark'] .code-preview {
-  border-color: #344154;
-  background: #080e18;
+  border-color: var(--product-border, #344154);
+  background: var(--product-panel-background, #080e18);
 }
 
 :root[data-theme='dark'] .toggle-track {
@@ -4296,13 +4296,13 @@ nav a:hover,
 
 :root[data-theme='dark'] .attestation-guidance h2,
 :root[data-theme='dark'] .attestation-references strong {
-  color: #edf4f8;
+  color: var(--product-text, #edf4f8);
 }
 
 :root[data-theme='dark'] .attestation-guidance-copy > p,
 :root[data-theme='dark'] .attestation-references span,
 :root[data-theme='dark'] .attestation-references code {
-  color: #adbdc8;
+  color: var(--product-muted-text, #adbdc8);
 }
 
 :root[data-theme='dark'] .attestation-references a,
@@ -4312,12 +4312,12 @@ nav a:hover,
 
 :root[data-theme='dark'] .runtime-summary-grid li {
   border-color: #6b3c34;
-  background: #251b22;
+  background: var(--product-selection, #251b22);
   color: #d6c2be;
 }
 
 :root[data-theme='dark'] .runtime-install-summary header p code {
-  color: #dce3ec;
+  color: var(--product-text, #dce3ec);
 }
 
 :root[data-theme='dark'] .scheduled-reconcile-note {

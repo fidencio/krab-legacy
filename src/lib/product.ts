@@ -1,5 +1,27 @@
 import { createAdvancedConfiguration, type ExplorerCatalog, type FamilySelections } from './artifacts'
 
+/** Runtime colour overrides; omitted colours keep KRAB's selected light/dark palette. */
+export function productTheme(catalog: ExplorerCatalog, mode: 'light' | 'dark') {
+  const palette = catalog.product?.theme?.[mode] ?? {}
+  const properties: Record<string, string> = {}
+  for (const [field, color] of Object.entries(palette)) {
+    const name = field.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)
+    properties[`--product-${name}`] = color
+  }
+  if (palette.accent) {
+    const hex = palette.accent.slice(1)
+    const expanded = hex.length === 3 ? [...hex].map(c => c + c).join('') : hex
+    const rgb = [0, 2, 4].map(offset => parseInt(expanded.slice(offset, offset + 2), 16) / 255)
+      .map(c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4)
+    const luminance = .2126 * rgb[0] + .7152 * rgb[1] + .0722 * rgb[2]
+    properties['--product-on-accent'] = luminance > .179 ? '#000000' : '#ffffff'
+  }
+  if (palette.accent || palette.panelBackground) {
+    properties['--product-selection'] = 'color-mix(in srgb, var(--kata-orange) 8%, var(--surface-raised))'
+  }
+  return properties
+}
+
 export function productFeature(catalog: ExplorerCatalog, name: string) {
   return catalog.product?.features.advanced !== false && catalog.product?.features[name] !== false
 }

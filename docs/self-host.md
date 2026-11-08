@@ -42,6 +42,7 @@ Start with [the CoCo example](../examples/product-profiles/coco.json). It illust
 | `apiVersion` | `krab/product/v1alpha1` |
 | `id`, `name`, `description` | Product identity and website/TUI title |
 | `logo` | Optional relative website asset path or HTTPS image URL |
+| `theme.light`, `theme.dark` | Optional website colours for each appearance mode |
 | `available.vendors` | Allowed existing vendor/path IDs |
 | `available.runtimes` | Allowed existing runtime IDs, across the selected vendors |
 | `available.distributions` | Allowed Kubernetes distribution IDs |
@@ -66,3 +67,18 @@ Feature flags default to `true`. Set any of these to `false`:
 A disabled feature can still be enabled by the operator in `defaults`; end users cannot change it through that configured product. Imported configurations use the same checks. Raw Helm overrides cannot bypass disabled features or restricted availability lists, and are not supported in product defaults. The profile configures the product; Kubernetes permissions and authorization remain the cluster operator's responsibility.
 
 Validate a profile offline with `krab --profile profile.json list catalog --json`. Inspect `product.defaults` in that output for the engine's fully resolved starting configuration.
+
+## Set website colours
+
+Add `theme.light` and/or `theme.dark` to `krab-profile.json`. Each palette accepts `pageBackground`, `panelBackground`, `text`, `mutedText`, `accent`, and `border` as opaque `#RGB` or `#RRGGBB` colours. For example:
+
+```json
+"theme": {
+  "light": { "pageBackground": "#f4f8fc", "panelBackground": "#fff", "text": "#152d45", "accent": "#006b9e" },
+  "dark": { "pageBackground": "#091827", "panelBackground": "#122a3e", "text": "#edf6ff", "accent": "#62c8ff" }
+}
+```
+
+The website follows the visitor's system preference and its light/dark toggle. Omitted colours retain KRAB's palette for that mode; the example profile includes matching muted text and borders. Choose text and backgrounds with sufficient contrast; text on solid accent buttons automatically uses black or white. Replace the profile file and reload to apply changes, without rebuilding the website or WASM. Unknown fields and invalid colours block the profile with an explanation.
+
+These colours apply to the website. The TUI retains its terminal palette, and theme settings do not change generated deployments.

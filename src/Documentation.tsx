@@ -257,7 +257,7 @@ cat /var/lib/krab/conformance/latest.json`}</Command>
         </details>
         <ol className="docs-steps">
           <li><strong>Choose your product.</strong> Edit the JSON file’s name, description, logo path,
-            runtime and platform lists, feature flags, and native configuration defaults.
+          colours, runtime and platform lists, feature flags, and native configuration defaults.
             The example uses CoCo-dev, a development runtime without a hardware TEE.</li>
           <li><strong>Deploy the static site.</strong> Build the website container from the matching
             source revision, or serve its portable static-site artifact on your own host.
@@ -284,6 +284,19 @@ krab --profile krab-profile.json generate --config krab.yaml --output values.yam
           Invalid profiles block the builder with an explanation.</p>
         <p>Profiles are available in Next; use matching website and CLI artifacts from the same source revision.
           Previously released 0.2.10 binaries do not include this feature.</p>
+        <h3>Set your website colours</h3>
+        <p>Add independent <code>theme.light</code> and <code>theme.dark</code> palettes to the profile.
+          The website follows the visitor’s system preference and light/dark toggle.</p>
+        <Command>{`"theme": {
+  "light": { "pageBackground": "#f4f8fc", "panelBackground": "#fff", "text": "#152d45", "accent": "#006b9e" },
+  "dark": { "pageBackground": "#091827", "panelBackground": "#122a3e", "text": "#edf6ff", "accent": "#62c8ff" }
+}`}</Command>
+        <p>Each palette accepts <code>pageBackground</code>, <code>panelBackground</code>, <code>text</code>,
+          <code> mutedText</code>, <code>accent</code>, and <code>border</code> as opaque
+          <code> #RGB</code> or <code>#RRGGBB</code> colours. Omitted colours retain the selected KRAB palette.
+          Choose readable text/background combinations; solid accent buttons use black or white text automatically.
+          Replace the profile and reload to apply changes without rebuilding. These settings affect the website;
+          the TUI keeps its terminal palette and generated deployments stay the same.</p>
         <h3>Choose the available controls</h3>
         <p><code>available</code> can restrict vendors, runtimes, distributions, architectures, and
           hardwareFamilies using their existing catalog IDs. Omit a list to keep all its choices;
