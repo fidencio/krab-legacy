@@ -2,6 +2,36 @@
 
 All notable changes to KRAB are documented in this file.
 
+## [0.2.11] - 2026-11-08
+
+### Added
+
+- Self-hosted static website and CLI product profiles with configurable branding,
+  defaults, available runtimes and platforms, advanced controls, and KRAB attribution.
+- Runtime-configurable light and dark website colours, a CoCo example profile,
+  portable website artifacts, and on-site self-hosting documentation.
+- Kubernetes smoke tests using Kata's own setup scripts for kubeadm, k0s, k3s,
+  MicroK8s, and RKE2, including generic CPU, EROFS, and Nydus runtime coverage.
+- Dependabot updates, Rust quality/security checks, reproducible CLI verification,
+  and rendered deployment artifacts for pull requests.
+
+### Changed
+
+- Remove the experimental controller and its deployment integration.
+- Update JavaScript, Rust, container, and GitHub Actions dependencies, with
+  compatibility fixes and a patched fast-uri dependency.
+- Use supported Node 26 LTS for the website container's build stage.
+
+### Fixed
+
+- Reject EROFS runtime selections on incompatible MicroK8s installations while
+  keeping supported Nydus runtimes available.
+- Recover from build-tool download outages through the release API and exact,
+  locked wasm-bindgen source builds, retaining integrity checks and reproducible
+  browser output.
+- Fetch checksum-verified Syft assets through the release API for SBOM jobs.
+- Allow Pages more time to synchronize immutable release builders.
+
 ## [0.2.10] - 2026-11-07
 
 - Select NVIDIA CPU TDX and SNP directly in the website, TUI, and CLI. Prepare

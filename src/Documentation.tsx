@@ -282,8 +282,8 @@ krab --profile krab-profile.json edit --config krab.yaml
 krab --profile krab-profile.json generate --config krab.yaml --output values.yaml`}</Command>
         <p>Disabled settings stay at the product defaults, including in imported configurations.
           Invalid profiles block the builder with an explanation.</p>
-        <p>Profiles are available in Next; use matching website and CLI artifacts from the same source revision.
-          Previously released 0.2.10 binaries do not include this feature.</p>
+        <p>Product profiles are available in KRAB 0.2.11 and later. Use matching website and CLI releases,
+          or development artifacts from the same source revision.</p>
         <h3>Set your website colours</h3>
         <p>Add independent <code>theme.light</code> and <code>theme.dark</code> palettes to the profile.
           The website follows the visitor’s system preference and light/dark toggle.</p>

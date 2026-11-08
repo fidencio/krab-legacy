@@ -2,7 +2,7 @@
 
 Deploy the same static website and native CLI with an operator-owned JSON profile. The shared Rust engine filters available choices, validates defaults, and keeps disabled settings fixed at those defaults. The website also omits disabled controls. Both interfaces retain **Powered by KRAB** attribution. This does not change the repository's Apache-2.0 license.
 
-Profiles are a Next feature. Use the website and CLI artifacts built from the same source revision; the previously published 0.2.10 binary does not implement `--profile`.
+Product profiles are available in KRAB 0.2.11 and later. Use matching website and CLI releases, or development artifacts from the same source revision.
 
 ## Run the website
 
