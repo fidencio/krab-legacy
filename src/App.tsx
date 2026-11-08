@@ -17,7 +17,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { coreCatalog, coreRequest } from './lib/core'
-import { productDefaults, productFeature, websiteConfiguration } from './lib/product'
+import { productDefaults, productFeature, productTheme, websiteConfiguration } from './lib/product'
 import packageData from '../package.json'
 import krabLogoDark from './assets/brands/krab-kata-hybrid.png'
 import krabLogoLight from './assets/brands/krab-kata-hybrid-light.png'
@@ -375,6 +375,11 @@ function App() {
   const installErofsUtils = advanced.installErofsUtils
   useEffect(() => {
     document.documentElement.dataset.theme = theme
+    const properties = productTheme(catalog, theme)
+    for (const [name, value] of Object.entries(properties)) document.documentElement.style.setProperty(name, value)
+    return () => {
+      for (const name of Object.keys(properties)) document.documentElement.style.removeProperty(name)
+    }
   }, [theme])
   useEffect(() => {
     let active = true
