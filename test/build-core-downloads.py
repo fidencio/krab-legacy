@@ -3,6 +3,7 @@ import io
 import json
 from pathlib import Path
 import runpy
+import tempfile
 import unittest
 from unittest.mock import patch
 import urllib.error
@@ -60,6 +61,42 @@ class Downloads(unittest.TestCase):
                 download(url)
         self.assertEqual(request.call_count, 4)
         self.assertEqual(self.sleep.call_count, 2)
+
+
+class SourceFallback(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        (self.root/'core').mkdir()
+        (self.root/'core/Cargo.lock').write_text('name = "wasm-bindgen"\nversion = "0.2.129"\n')
+        patch('platform.machine', return_value='x86_64').start()
+        patch('platform.system', return_value='Linux').start()
+        patch('shutil.which', return_value=None).start()
+        patch('sys.stderr', new_callable=io.StringIO).start()
+        self.addCleanup(patch.stopall)
+
+    def test_network_outage_uses_exact_tool_and_locked_registry_dependencies(self):
+        def cargo(args, **kwargs):
+            root = Path(args[args.index('--root') + 1])
+            (root/'bin').mkdir(parents=True)
+            (root/'bin/wasm-bindgen').write_text('source-built executable')
+        with patch.dict(build['binding_tool'].__globals__, download=lambda _: (_ for _ in ()).throw(TimeoutError())), \
+             patch('subprocess.run', side_effect=cargo) as install, \
+             patch('subprocess.check_output', return_value='wasm-bindgen 0.2.129\n'):
+            executable = build['binding_tool'](self.root, None, '1.95.0')
+        args = install.call_args.args[0]
+        self.assertIn('+1.95.0', args)
+        self.assertIn('--locked', args)
+        self.assertEqual(args[args.index('--version') + 1], '=0.2.129')
+        self.assertEqual(executable.read_text(), 'source-built executable')
+
+    def test_checksum_failure_never_falls_back_or_executes_an_archive(self):
+        with patch.dict(build['binding_tool'].__globals__, download=lambda value: b'0' * 64 if value.endswith('.sha256sum') else b'archive'), \
+             patch('subprocess.run') as install:
+            with self.assertRaisesRegex(RuntimeError, 'checksum mismatch'):
+                build['binding_tool'](self.root, None, '1.95.0')
+        install.assert_not_called()
 
 
 if __name__ == '__main__':

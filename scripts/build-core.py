@@ -64,7 +64,7 @@ def source_files(root):
                    root/'charts/krab/values.schema.json', root/'upstream/erofs-utils-image.lock.json'])
 
 
-def binding_tool(root, supplied):
+def binding_tool(root, supplied, toolchain):
     version = re.search(r'name = "wasm-bindgen"\nversion = "([^"]+)"',
                         (root/'core/Cargo.lock').read_text()).group(1)
     if supplied:
@@ -82,17 +82,28 @@ def binding_tool(root, supplied):
         if not executable.exists():
             destination.mkdir(parents=True, exist_ok=True)
             base = f'https://github.com/wasm-bindgen/wasm-bindgen/releases/download/{version}/{name}.tar.gz'
-            archive = download(base)
-            expected = download(base+'.sha256sum').decode().split()[0]
-            if hashlib.sha256(archive).hexdigest() != expected:
-                raise RuntimeError('wasm-bindgen download checksum mismatch')
-            path = destination/(name+'.tar.gz')
-            path.write_bytes(archive)
-            with tarfile.open(path) as tar:
-                for member in tar.getmembers():
-                    if member.name.startswith('/') or '..' in Path(member.name).parts or member.issym() or member.islnk():
-                        raise RuntimeError('Unsafe wasm-bindgen archive member')
-                tar.extractall(destination)
+            try:
+                archive = download(base)
+                expected = download(base+'.sha256sum').decode().split()[0]
+                if hashlib.sha256(archive).hexdigest() != expected:
+                    raise RuntimeError('wasm-bindgen download checksum mismatch')
+                path = destination/(name+'.tar.gz')
+                path.write_bytes(archive)
+                with tarfile.open(path) as tar:
+                    for member in tar.getmembers():
+                        if member.name.startswith('/') or '..' in Path(member.name).parts or member.issym() or member.islnk():
+                            raise RuntimeError('Unsafe wasm-bindgen archive member')
+                    tar.extractall(destination)
+            except (urllib.error.URLError, TimeoutError) as error:
+                if isinstance(error, urllib.error.HTTPError) and error.code != 429 and not 500 <= error.code < 600:
+                    raise
+                print(f'Release downloads unavailable; building locked wasm-bindgen {version} from crates.io', file=sys.stderr)
+                # Cargo verifies registry checksums; --locked and =version prevent
+                # dependency or tool upgrades. Integrity failures above stay fatal.
+                subprocess.run(['cargo', f'+{toolchain}', 'install', '--locked', '--version',
+                                f'={version}', '--bin', 'wasm-bindgen', '--root',
+                                str(destination/name), 'wasm-bindgen-cli'], check=True)
+                shutil.copy2(destination/name/'bin/wasm-bindgen', executable)
             executable.chmod(0o755)
     actual = subprocess.check_output([executable, '--version'], text=True).strip()
     if actual != f'wasm-bindgen {version}':
@@ -111,7 +122,9 @@ def main():
     binary = root/'core/target/wasm32-unknown-unknown/release/krab_core.wasm'
     output = root/'src/generated/engine'
     output.mkdir(parents=True, exist_ok=True)
-    subprocess.run([binding_tool(root, args.bindgen), '--target', 'web', '--out-dir', str(output),
+    # Published and source-built tools have different build-commit metadata.
+    # Remove that non-executable section so either verified path is reproducible.
+    subprocess.run([binding_tool(root, args.bindgen, args.toolchain), '--remove-producers-section', '--target', 'web', '--out-dir', str(output),
                     '--out-name', 'engine', str(binary)], check=True)
     digest = hashlib.sha256()
     for path in source_files(root):
