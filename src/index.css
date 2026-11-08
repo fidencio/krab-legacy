@@ -3,37 +3,37 @@
 :root {
   color-scheme: light;
   font-family: 'Roboto', sans-serif;
-  color: #333;
-  background: #fff;
+  color: var(--product-text, #333);
+  background: var(--product-page-background, #fff);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --kata-primary: #f15b3e;
-  --kata-primary-bright: #f15b3e;
-  --kata-orange: #f15b3e;
-  --kata-orange-bright: #f15b3e;
-  --ink: #222;
-  --surface: #fff;
-  --surface-raised: #f6f7f8;
-  --line: #d5d5d5;
-  --muted: #6b6b6b;
+  --kata-primary: var(--product-accent, #f15b3e);
+  --kata-primary-bright: var(--product-accent, #f15b3e);
+  --kata-orange: var(--product-accent, #f15b3e);
+  --kata-orange-bright: var(--product-accent, #f15b3e);
+  --ink: var(--product-text, #222);
+  --surface: var(--product-page-background, #fff);
+  --surface-raised: var(--product-panel-background, #f6f7f8);
+  --line: var(--product-border, #d5d5d5);
+  --muted: var(--product-muted-text, #6b6b6b);
   --status-error: #b42342;
   --status-success: #157347;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  color: #e8edf4;
-  background: #0b1220;
-  --kata-primary: #f15b3e;
-  --kata-primary-bright: #ff765c;
-  --kata-orange: #f15b3e;
-  --kata-orange-bright: #ff8a70;
-  --ink: #e8edf4;
-  --surface: #0b1220;
-  --surface-raised: #121c2c;
-  --line: #2c3a4d;
-  --muted: #a8b3c2;
+  color: var(--product-text, #e8edf4);
+  background: var(--product-page-background, #0b1220);
+  --kata-primary: var(--product-accent, #f15b3e);
+  --kata-primary-bright: var(--product-accent, #ff765c);
+  --kata-orange: var(--product-accent, #f15b3e);
+  --kata-orange-bright: var(--product-accent, #ff8a70);
+  --ink: var(--product-text, #e8edf4);
+  --surface: var(--product-page-background, #0b1220);
+  --surface-raised: var(--product-panel-background, #121c2c);
+  --line: var(--product-border, #2c3a4d);
+  --muted: var(--product-muted-text, #a8b3c2);
   --status-error: #ff718e;
   --status-success: #69d9a3;
 }

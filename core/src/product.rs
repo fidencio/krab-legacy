@@ -14,6 +14,8 @@ struct Profile {
     #[serde(default)]
     logo: String,
     #[serde(default)]
+    theme: Theme,
+    #[serde(default)]
     available: Available,
     #[serde(default)]
     features: Features,
@@ -23,6 +25,50 @@ struct Profile {
 
 fn mapping() -> Value {
     json!({})
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+struct Theme {
+    light: Palette,
+    dark: Palette,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+struct Palette {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    page_background: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    panel_background: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    muted_text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    accent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    border: Option<String>,
+}
+
+impl Theme {
+    fn validate(&self) -> Result<()> {
+        for (mode, palette) in [("light", &self.light), ("dark", &self.dark)] {
+            let value = serde_json::to_value(palette).map_err(|e| e.to_string())?;
+            for (field, color) in value.as_object().ok_or("Invalid product palette")? {
+                let color = text(color);
+                if !matches!(color.len(), 4 | 7)
+                    || !color.starts_with('#')
+                    || !color[1..].bytes().all(|c| c.is_ascii_hexdigit())
+                {
+                    return Err(format!(
+                        "Product theme.{mode}.{field} must be an opaque hex colour (#RGB or #RRGGBB)"
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -130,6 +176,7 @@ pub fn apply(catalog: &Value, source: &Value) -> Result<Value> {
     if !profile.defaults.is_object() {
         return Err("Product defaults must be a configuration mapping".into());
     }
+    profile.theme.validate()?;
     let a = &profile.available;
     let vendors = items(&catalog["vendors"]);
     let ids = |field: &str| {
@@ -300,7 +347,7 @@ pub fn apply(catalog: &Value, source: &Value) -> Result<Value> {
         || a.distributions.is_some()
         || a.hardware_families.is_some();
     result["product"] = json!({"id": profile.id, "name": profile.name, "description": profile.description,
-        "logo": profile.logo, "features": profile.features, "defaults": defaults,
+        "logo": profile.logo, "theme": profile.theme, "features": profile.features, "defaults": defaults,
         "applyDefaults": profile.defaults.as_object().is_some_and(|v| !v.is_empty()),
         "architectures": a.architectures, "restricted": restricted,
         "attribution": "Powered by KRAB", "attributionUrl": "https://github.com/fidencio/krab"});
@@ -459,6 +506,32 @@ mod tests {
         crate::values::build(&expanded, &catalog).unwrap();
     }
 
+    #[test]
+    fn theme_is_validated_without_changing_deployments() {
+        let source = crate::config::catalog();
+        let baseline = apply(&source, &profile()).unwrap();
+        let mut themed = profile();
+        themed["theme"] = json!({"light": {"pageBackground": "#fefefe", "accent": "#369"},
+            "dark": {"panelBackground": "#182030", "text": "#eee"}});
+        let applied = apply(&source, &themed).unwrap();
+        assert_eq!(applied["product"]["theme"], themed["theme"]);
+        let config = serde_json::from_value(baseline["product"]["defaults"].clone()).unwrap();
+        assert_eq!(
+            crate::values::build(&config, &baseline).unwrap(),
+            crate::values::build(&config, &applied).unwrap()
+        );
+        for invalid in [
+            json!({"light": {"accent": "red"}}),
+            json!({"light": {"accent": "#ffffff00"}}),
+            json!({"dark": {"text": "url(https://example.com)"}}),
+            json!({"dark": {"pageBackground": "#gggggg"}}),
+            json!({"light": {"typo": "#fff"}}),
+            json!({"typo": {}}),
+        ] {
+            themed["theme"] = invalid;
+            assert!(apply(&source, &themed).is_err());
+        }
+    }
     #[test]
     fn profile_typos_empty_products_and_invalid_defaults_fail_closed() {
         for change in [
