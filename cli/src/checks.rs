@@ -162,7 +162,7 @@ pub fn collect(
         if cancelled.load(Ordering::Relaxed) {
             #[cfg(unix)]
             if let Some(pid) = rustix::process::Pid::from_raw(child.id() as i32) {
-                let _ = rustix::process::kill_process_group(pid, rustix::process::Signal::Term);
+                let _ = rustix::process::kill_process_group(pid, rustix::process::Signal::TERM);
             }
             let _ = child.kill();
             let _ = child.wait();

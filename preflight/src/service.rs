@@ -334,7 +334,10 @@ fn prepare(
     policy.validate()?;
     let unit = unit(policy)?;
     let checker = fs::read(checker).context("read Linux krab-preflight checker binary")?;
-    let digest = format!("{:x}", Sha256::digest(&checker));
+    let digest = Sha256::digest(&checker)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
     if let Some(expected) = expected {
         ensure!(
             expected.len() == 64 && expected.bytes().all(|c| c.is_ascii_hexdigit()),
@@ -528,7 +531,7 @@ mod tests {
 
     #[rstest]
     fn pins_and_records_the_installed_checker_digest(host: TempDir, policy: Policy) {
-        let digest = format!("{:x}", Sha256::digest(b"checker fixture"));
+        let digest = "f07ffa7fdf7a01168f8edc49eb05670bfb5301bcbb661b2fdf690aa3353efeb7";
         assert!(install(
             host.path(),
             &host.path().join("checker"),
@@ -540,7 +543,7 @@ mod tests {
         install(
             host.path(),
             &host.path().join("checker"),
-            Some(&digest),
+            Some(digest),
             &policy,
         )
         .unwrap();
