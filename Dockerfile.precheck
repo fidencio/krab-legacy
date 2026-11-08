@@ -4,7 +4,7 @@ FROM --platform=linux/arm64 ghcr.io/kata-containers/kata-device-provisioner:0.1.
 
 # Run rustc on the builder CPU. Only the resulting checker targets other CPUs;
 # compiling Rust under QEMU made releases wait on PowerPC and s390x for minutes.
-FROM --platform=$BUILDPLATFORM rust:1.95-slim AS cross-toolchain
+FROM --platform=$BUILDPLATFORM rust:1.98-slim AS cross-toolchain
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc-x86-64-linux-gnu gcc-aarch64-linux-gnu \
     gcc-powerpc64le-linux-gnu gcc-s390x-linux-gnu \
