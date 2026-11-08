@@ -12,6 +12,11 @@ import pkg from '../package.json' with { type: 'json' }
 const config = { apiVersion: 'krab/v1alpha1', vendor: 'custom', distribution: 'kubeadm',
   architectures: ['amd64'], runtimes: ['qemu-runtime-rs'] }
 
+test('browser tool downloads recover through the release API and fail closed on invalid assets', () => {
+  const result = spawnSync('python3', [resolve(import.meta.dirname, 'build-core-downloads.py')], { encoding: 'utf8' })
+  assert.equal(result.status, 0, result.stdout + result.stderr)
+})
+
 test('browser embeds the exact native catalog and version, and Rust validates its configuration', () => {
   assert.equal(coreVersion, pkg.version)
   assert.deepEqual(coreCatalog, catalog)

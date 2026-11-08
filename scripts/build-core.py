@@ -15,15 +15,38 @@ import urllib.error
 import urllib.request
 
 
+def release_api_url(url):
+    match = re.fullmatch(
+        r'https://github.com/wasm-bindgen/wasm-bindgen/releases/download/([^/]+)/([^/]+)', url)
+    if not match:
+        return None
+    version, filename = match.groups()
+    endpoint = f'https://api.github.com/repos/wasm-bindgen/wasm-bindgen/releases/tags/{version}'
+    request = urllib.request.Request(f'{endpoint}?krab_retry={time.time_ns()}', headers={
+        'User-Agent': 'KRAB-build', 'Cache-Control': 'no-cache',
+    })
+    with urllib.request.urlopen(request, timeout=30) as response:
+        release = json.load(response)
+    for asset in release['assets']:
+        if asset['name'] == filename:
+            return f'https://api.github.com/repos/wasm-bindgen/wasm-bindgen/releases/assets/{int(asset["id"])}'
+    raise RuntimeError(f'Locked wasm-bindgen release asset is missing: {filename}')
+
+
 def download(url):
     """Retry transient release-host errors; the caller verifies the checksum."""
+    api_url = None
     for attempt in range(3):
-        separator = '&' if '?' in url else '?'
-        request_url = url if attempt == 0 else f'{url}{separator}krab_retry={time.time_ns()}'
-        request = urllib.request.Request(request_url, headers={
-            'User-Agent': 'KRAB-build', 'Cache-Control': 'no-cache',
-        })
         try:
+            if attempt and api_url is None:
+                api_url = release_api_url(url)
+            target = api_url or url
+            separator = '&' if '?' in target else '?'
+            request_url = target if attempt == 0 else f'{target}{separator}krab_retry={time.time_ns()}'
+            headers = {'User-Agent': 'KRAB-build', 'Cache-Control': 'no-cache'}
+            if api_url:
+                headers['Accept'] = 'application/octet-stream'
+            request = urllib.request.Request(request_url, headers=headers)
             with urllib.request.urlopen(request, timeout=30) as response:
                 return response.read()
         except (urllib.error.URLError, TimeoutError) as error:
