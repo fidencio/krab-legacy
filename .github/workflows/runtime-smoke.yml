@@ -47,7 +47,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: rust-lld
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Resolve the Kata revision already pinned by KRAB
@@ -69,7 +69,7 @@ jobs:
           krab_host="$(rustc +1.95.0 -vV | sed -n 's/^host: //p')"
           echo "${krab_sysroot}/lib/rustlib/${krab_host}/bin" >> "${GITHUB_PATH}"
       # These binaries are used only by read-only smoke jobs, never release promotion.
-      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # zizmor: ignore[cache-poisoning] CI-only tools; no publication permissions.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # zizmor: ignore[cache-poisoning] CI-only tools; no publication permissions.
         with:
           path: |
             ~/.cargo/registry
@@ -119,11 +119,11 @@ jobs:
       CONTAINER_ENGINE_VERSION: latest
       KATA_HYPERVISOR: qemu-runtime-rs
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Clone the pinned Kata Kubernetes helpers
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: kata-containers/kata-containers
           ref: ${{ needs.tools.outputs.kata-ref }}
