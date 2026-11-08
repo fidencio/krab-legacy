@@ -63,7 +63,7 @@ impl Logo {
 #[cfg(unix)]
 fn detect() -> Option<Picker> {
     use ratatui_image::picker::cap_parser::{Parser, QueryStdioOptions, Response};
-    use rustix::event::{poll, PollFd, PollFlags};
+    use rustix::event::{poll, PollFd, PollFlags, Timespec};
     use std::{
         fs::OpenOptions,
         io::{Read, Write},
@@ -92,11 +92,10 @@ fn detect() -> Option<Picker> {
     let mut font_size = None;
     let mut replies = String::new();
     'query: while Instant::now() < deadline {
-        let timeout = deadline
-            .saturating_duration_since(Instant::now())
-            .as_millis() as i32;
+        let timeout =
+            Timespec::try_from(deadline.saturating_duration_since(Instant::now())).ok()?;
         let mut fds = [PollFd::new(&tty, PollFlags::IN)];
-        if poll(&mut fds, timeout).ok()? == 0 {
+        if poll(&mut fds, Some(&timeout)).ok()? == 0 {
             break;
         }
         let mut bytes = [0; 256];
