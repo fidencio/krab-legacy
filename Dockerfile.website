@@ -11,7 +11,7 @@ COPY upstream/erofs-utils-image.lock.json ./upstream/erofs-utils-image.lock.json
 COPY scripts/build-core.py ./scripts/build-core.py
 RUN python3 scripts/build-core.py --toolchain "$(rustc --version | cut -d ' ' -f 2)"
 
-FROM node:25-bookworm-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS website
+FROM node:26-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68 AS website
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
