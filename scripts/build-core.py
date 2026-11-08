@@ -8,8 +8,31 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
+import time
+import urllib.error
 import urllib.request
+
+
+def download(url):
+    """Retry transient release-host errors; the caller verifies the checksum."""
+    for attempt in range(3):
+        separator = '&' if '?' in url else '?'
+        request_url = url if attempt == 0 else f'{url}{separator}krab_retry={time.time_ns()}'
+        request = urllib.request.Request(request_url, headers={
+            'User-Agent': 'KRAB-build', 'Cache-Control': 'no-cache',
+        })
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return response.read()
+        except (urllib.error.URLError, TimeoutError) as error:
+            if isinstance(error, urllib.error.HTTPError) and error.code != 429 and not 500 <= error.code < 600:
+                raise
+            if attempt == 2:
+                raise
+            print(f'Retrying wasm-bindgen download after {error} (retry {attempt + 1}/2)', file=sys.stderr)
+            time.sleep(2 ** attempt)
 
 
 def source_files(root):
@@ -36,9 +59,6 @@ def binding_tool(root, supplied):
         if not executable.exists():
             destination.mkdir(parents=True, exist_ok=True)
             base = f'https://github.com/wasm-bindgen/wasm-bindgen/releases/download/{version}/{name}.tar.gz'
-            def download(url):
-                with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent':'KRAB-build'})) as response:
-                    return response.read()
             archive = download(base)
             expected = download(base+'.sha256sum').decode().split()[0]
             if hashlib.sha256(archive).hexdigest() != expected:
