@@ -496,4 +496,4 @@ See [CI and PR artifacts](docs/ci.md) for preview deployments, downloadable char
 
 ## Self-hosted products
 
-The website and CLI can share a product profile for available runtimes, platforms, advanced features, branding, and defaults. See [self-hosting](docs/self-host.md) for the container, static-host deployment, and CoCo example. Both interfaces include Powered by KRAB attribution.
+The website and CLI can share a product profile for available runtimes, platforms, advanced features, branding, and defaults. See [self-hosting](docs/self-host.md) for the container, static-host deployment, and CoCo example. Both interfaces include Powered by KRAB attribution. Explore the [runnable product demos](demo/README.md), including a CoCo-branded site.

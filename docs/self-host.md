@@ -35,6 +35,9 @@ krab --profile examples/product-profiles/coco.json generate --config coco.yaml -
 
 ## Configure the profile
 
+For a runnable CoCo-branded site with Intel, AMD, IBM, and NVIDIA choices, see
+[the Confidential Containers demo](../demo/confidential-containers/README.md).
+
 Start with [the CoCo example](../examples/product-profiles/coco.json). It illustrates an amd64 CoCo-dev product with Nydus, without NVIDIA hardware choices or editable image pins. CoCo-dev is a development runtime without a hardware TEE. For a confidential workload product, select the appropriate TDX/SNP runtimes and test them on matching hardware. The example is not an official CoCo distribution.
 
 | Field | Purpose |
