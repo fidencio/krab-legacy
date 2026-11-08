@@ -514,10 +514,11 @@ jobs:
             fi
           done
 
-      - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      - name: Install checksum-verified Syft through the release API
         id: syft
-        with:
-          syft-version: v1.52.0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/install-syft.py
 
       - name: Generate a pre-flight image SBOM for each architecture
         id: image_sbom
